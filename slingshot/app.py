@@ -7,20 +7,7 @@ import shutil
 import tempfile
 import uuid
 
-import bagit
 import requests
-
-
-def create_bag(layer, storage):
-    """Create bag of layer in storage directory.
-
-    This will copy the layer to the storage area and then turn the
-    copied directory into a bag. Both arguments should be absolute
-    paths to directories. Returns the absolute path to the bag.
-    """
-    data = copy_dir(layer, storage)
-    bag = bagit.make_bag(data)
-    return bag.path
 
 
 def copy_dir(directory, destination):
@@ -69,3 +56,8 @@ def temp_archive(data, name):
         yield archive
     finally:
         os.remove(archive)
+
+
+def sub_dirs(directory):
+    return [d for d in os.listdir(directory)
+            if os.path.isdir(os.path.join(directory, d))]

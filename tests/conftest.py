@@ -27,3 +27,10 @@ def layer():
 def zipped_bag():
     cur_dir = os.path.dirname(os.path.realpath(__file__))
     return os.path.join(cur_dir, 'fixtures/bag.zip')
+
+
+@pytest.fixture
+def layers_dir(layer):
+    d = tempfile.mkdtemp()
+    shutil.copytree(layer, os.path.join(d, 'grayscale'))
+    return d
