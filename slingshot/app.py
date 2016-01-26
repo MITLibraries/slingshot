@@ -34,8 +34,15 @@ def submit(archive, url):
 
 
 def make_uuid(value, namespace):
-    ns = uuid.uuid5(uuid.NAMESPACE_DNS, namespace)
-    uid = uuid.uuid5(ns, value)
+    try:
+        ns = uuid.uuid5(uuid.NAMESPACE_DNS, namespace)
+        uid = uuid.uuid5(ns, value)
+    except UnicodeDecodeError:
+        # Python 2 requires a byte string for the second argument.
+        # Python 3 requires a unicode string for the second argument.
+        value, namespace = [_bytes(s) for s in (value, namespace)]
+        ns = uuid.uuid5(uuid.NAMESPACE_DNS, namespace)
+        uid = uuid.uuid5(ns, value)
     return str(uid)
 
 
@@ -61,3 +68,7 @@ def temp_archive(data, name):
 def sub_dirs(directory):
     return [d for d in os.listdir(directory)
             if os.path.isdir(os.path.join(directory, d))]
+
+
+def _bytes(value):
+    return bytearray(value, 'utf-8')
