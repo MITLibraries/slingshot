@@ -53,6 +53,11 @@ def test_make_uuid_creates_uuid_string():
         'aabfaa4e-15a2-51b5-a684-46c530cb0263'
 
 
+def test_make_uuid_works_with_unicode_values():
+    assert make_uuid('grayscale', u'arrowsmith.mit.edu') == \
+        'aabfaa4e-15a2-51b5-a684-46c530cb0263'
+
+
 def test_sub_dirs_returns_list_of_sub_directories():
     d = tempfile.mkdtemp()
     os.mkdir(os.path.join(d, 'foo'))
