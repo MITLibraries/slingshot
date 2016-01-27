@@ -4,6 +4,7 @@ import os.path
 import tempfile
 
 from click.testing import CliRunner
+import mock
 import pytest
 import requests_mock
 
@@ -39,3 +40,12 @@ def test_run_removes_bag_on_failure(runner, layers_dir):
         m.post('http://localhost', status_code=500)
         runner.invoke(main, ['run', layers_dir, store, 'http://localhost'])
         assert not os.path.isdir(os.path.join(store, 'grayscale'))
+
+
+def test_run_uses_supplied_namespace(runner, layers_dir):
+    with mock.patch('slingshot.cli.submit') as m:
+        store = tempfile.mkdtemp()
+        runner.invoke(main, ['run', layers_dir, store, 'http://localhost',
+                             '--namespace', 'foo.bar'])
+    assert os.path.basename(m.call_args[0][0]) == \
+                            '1de12baa-ec69-5cc2-aa2c-54bd77b3ce40.zip'
