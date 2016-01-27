@@ -21,14 +21,15 @@ def main():
 @click.argument('store', type=click.Path(exists=True, file_okay=False,
                                          resolve_path=True))
 @click.argument('url')
-def run(layers, store, url):
+@click.option('--namespace', default='arrowsmith.mit.edu')
+def run(layers, store, url, namespace):
     data = set(sub_dirs(layers))
     uploaded = set(sub_dirs(store))
     for directory in data - uploaded:
         bag = copy_dir(os.path.join(layers, directory), store)
         try:
             bagit.make_bag(bag)
-            bag_name = make_uuid(os.path.basename(bag), 'arrowsmith.mit.edu')
+            bag_name = make_uuid(os.path.basename(bag), namespace)
             with temp_archive(bag, bag_name) as zf:
                 submit(zf, url)
         except Exception as e:
