@@ -28,8 +28,9 @@ def copy_dir(directory, destination):
     return dest
 
 
-def submit(archive, url):
-    r = requests.post(url, files={'file': io.open(archive, 'rb')})
+def submit(archive, url, auth=None):
+    r = requests.post(url, files={'file': io.open(archive, 'rb')},
+                      auth=auth)
     r.raise_for_status()
 
 

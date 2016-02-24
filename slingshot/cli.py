@@ -23,7 +23,10 @@ def main():
 @click.argument('url')
 @click.option('--namespace', default='arrowsmith.mit.edu',
               help="Namespace used for generating UUID 5.")
-def run(layers, store, url, namespace):
+@click.option('--username', help="Username for kepler submission.")
+@click.option('--password',
+              help="Password for kepler submission. Omit for prompt.")
+def run(layers, store, url, namespace, username, password):
     """Create and upload bags to the specified endpoint.
 
     This script will create bags from all the layers in the LAYERS
@@ -40,6 +43,11 @@ def run(layers, store, url, namespace):
     The namespace option is used in generating a UUID 5 identifier
     for the layer. The default value is arrowsmith.mit.edu.
     """
+    if username and not password:
+        password = click.prompt('Password', hide_input=True)
+    auth = username, password
+    if not all(auth):
+        auth = None
     data = set(sub_dirs(layers))
     uploaded = set(sub_dirs(store))
     for directory in data - uploaded:
@@ -48,7 +56,7 @@ def run(layers, store, url, namespace):
             bagit.make_bag(bag)
             bag_name = make_uuid(os.path.basename(bag), namespace)
             with temp_archive(bag, bag_name) as zf:
-                submit(zf, url)
+                submit(zf, url, auth)
         except Exception as e:
             shutil.rmtree(bag, ignore_errors=True)
             raise e
