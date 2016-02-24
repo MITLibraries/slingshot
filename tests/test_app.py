@@ -48,6 +48,14 @@ def test_submit_raises_error_for_failed_post(zipped_bag):
             submit(zipped_bag, 'http://localhost')
 
 
+def test_submit_uses_authentication(zipped_bag):
+    with requests_mock.Mocker() as m:
+        m.post('http://localhost')
+        submit(zipped_bag, 'http://localhost', ('foo', 'bar'))
+    assert m.request_history[0].headers['Authorization'] == \
+        'Basic Zm9vOmJhcg=='
+
+
 def test_make_uuid_creates_uuid_string():
     assert make_uuid('grayscale', 'arrowsmith.mit.edu') == \
         'aabfaa4e-15a2-51b5-a684-46c530cb0263'

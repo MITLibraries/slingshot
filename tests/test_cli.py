@@ -48,4 +48,14 @@ def test_run_uses_supplied_namespace(runner, layers_dir):
         runner.invoke(main, ['run', layers_dir, store, 'http://localhost',
                              '--namespace', 'foo.bar'])
     assert os.path.basename(m.call_args[0][0]) == \
-                            '1de12baa-ec69-5cc2-aa2c-54bd77b3ce40.zip'
+        '1de12baa-ec69-5cc2-aa2c-54bd77b3ce40.zip'
+
+
+def test_run_uses_authentication(runner, layers_dir):
+    with requests_mock.Mocker() as m:
+        store = tempfile.mkdtemp()
+        m.post('http://localhost')
+        runner.invoke(main, ['run', layers_dir, store, 'http://localhost',
+                             '--username', 'foo', '--password', 'bar'])
+    assert m.request_history[0].headers['Authorization'] == \
+        'Basic Zm9vOmJhcg=='
