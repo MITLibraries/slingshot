@@ -31,7 +31,7 @@ def test_run_leaves_bag_on_success(runner, layers_dir):
         store = tempfile.mkdtemp()
         m.post('http://localhost')
         runner.invoke(main, ['run', layers_dir, store, 'http://localhost'])
-        assert os.path.isdir(os.path.join(store, 'grayscale'))
+        assert os.path.isdir(os.path.join(store, 'SDE_DATA_BD_A8GNS_2003'))
 
 
 def test_run_removes_bag_on_failure(runner, layers_dir):
@@ -39,7 +39,7 @@ def test_run_removes_bag_on_failure(runner, layers_dir):
         store = tempfile.mkdtemp()
         m.post('http://localhost', status_code=500)
         runner.invoke(main, ['run', layers_dir, store, 'http://localhost'])
-        assert not os.path.isdir(os.path.join(store, 'grayscale'))
+        assert not os.path.isdir(os.path.join(store, 'SDE_DATA_BD_A8GNS_2003'))
 
 
 def test_run_uses_supplied_namespace(runner, layers_dir):
@@ -48,7 +48,7 @@ def test_run_uses_supplied_namespace(runner, layers_dir):
         runner.invoke(main, ['run', layers_dir, store, 'http://localhost',
                              '--namespace', 'foo.bar'])
     assert os.path.basename(m.call_args[0][0]) == \
-        '1de12baa-ec69-5cc2-aa2c-54bd77b3ce40.zip'
+        '90ebb45f-ad77-5c30-ab90-1b7e389f3398.zip'
 
 
 def test_run_uses_authentication(runner, layers_dir):

@@ -1,12 +1,13 @@
 # -*- coding: utf-8 -*-
 from __future__ import absolute_import
-import os.path
+import os
 import shutil
 
 import bagit
 import click
 
-from slingshot import make_uuid, sub_dirs, submit, temp_archive, copy_dir
+from slingshot import (make_uuid, submit, temp_archive, prep_bag,
+                       uploadable,)
 
 
 @click.group()
@@ -48,10 +49,8 @@ def run(layers, store, url, namespace, username, password):
     auth = username, password
     if not all(auth):
         auth = None
-    data = set(sub_dirs(layers))
-    uploaded = set(sub_dirs(store))
-    for directory in data - uploaded:
-        bag = copy_dir(os.path.join(layers, directory), store)
+    for data_layer in uploadable(layers, store):
+        bag = prep_bag(os.path.join(layers, data_layer), store)
         try:
             bagit.make_bag(bag)
             bag_name = make_uuid(os.path.basename(bag), namespace)

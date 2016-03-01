@@ -6,26 +6,40 @@ import os
 import shutil
 import tempfile
 import uuid
+from zipfile import ZipFile
 
 import requests
 
 
-def copy_dir(directory, destination):
-    """Copy a directory to a destination directory.
-
-    The directory will be copied to a directory with the same name
-    in the destination directory. If the copy fails for any reason
-    the copied directory will be removed. Returns the absolute path
-    to the newly created directory.
-    """
-    dirname = os.path.basename(os.path.normpath(directory))
-    dest = os.path.join(destination, dirname)
+def prep_bag(layer, destination):
+    layer_name = os.path.splitext(os.path.basename(layer))[0]
+    extracted = os.path.join(destination, layer_name)
+    os.mkdir(extracted)
     try:
-        shutil.copytree(directory, dest)
+        write_fgdc(layer,
+                   os.path.join(extracted, "%s.xml" % layer_name))
+        shutil.copy2(layer, extracted)
     except Exception as e:
-        shutil.rmtree(destination, ignore_errors=True)
+        shutil.rmtree(extracted, ignore_errors=True)
         raise e
-    return dest
+    return extracted
+
+
+def write_fgdc(layer, filename):
+    with ZipFile(layer) as zf:
+        for f in zf.namelist():
+            if f.endswith('.xml'):
+                with open(filename, 'wb') as fp:
+                    fp.write(zf.read(f))
+                return
+
+
+def uploadable(layers, uploaded):
+    loaded_dirs = [d for d in os.listdir(uploaded)
+                   if os.path.isdir(os.path.join(uploaded, d))]
+    for layer in [z for z in os.listdir(layers) if z.endswith('.zip')]:
+        if os.path.splitext(layer)[0] not in loaded_dirs:
+            yield layer
 
 
 def submit(archive, url, auth=None):
@@ -64,11 +78,6 @@ def temp_archive(data, name):
         yield archive
     finally:
         os.remove(archive)
-
-
-def sub_dirs(directory):
-    return [d for d in os.listdir(directory)
-            if os.path.isdir(os.path.join(directory, d))]
 
 
 def _bytes(value):

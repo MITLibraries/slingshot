@@ -30,7 +30,17 @@ def zipped_bag():
 
 
 @pytest.fixture
-def layers_dir(layer):
+def shapefile():
+    return _data_file('fixtures/SDE_DATA_BD_A8GNS_2003.zip')
+
+
+@pytest.fixture
+def layers_dir(shapefile):
     d = tempfile.mkdtemp()
-    shutil.copytree(layer, os.path.join(d, 'grayscale'))
+    shutil.copy2(shapefile, d)
     return d
+
+
+def _data_file(name):
+    cur_dir = os.path.dirname(os.path.realpath(__file__))
+    return os.path.join(cur_dir, name)
