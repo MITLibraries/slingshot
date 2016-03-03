@@ -2,6 +2,7 @@
 from __future__ import absolute_import
 import os
 import tempfile
+from zipfile import ZipFile
 
 from mock import patch
 import pytest
@@ -9,7 +10,7 @@ import requests
 import requests_mock
 
 from slingshot.app import (temp_archive, submit, make_uuid, write_fgdc,
-                           prep_bag, uploadable)
+                           prep_bag, uploadable, flatten_zip)
 
 
 @pytest.fixture
@@ -25,7 +26,13 @@ def test_prep_bag_removes_bag_dir_when_errors(shapefile, upload_dir):
     assert not os.listdir(upload_dir)
 
 
-def test_prep_bag_copies_zip_package_to_bag_dir(shapefile, upload_dir):
+def test_prep_bag_creates_fgdc_in_bag_dir(shapefile, upload_dir):
+    prep_bag(shapefile, upload_dir)
+    assert 'SDE_DATA_BD_A8GNS_2003.xml' in \
+        os.listdir(os.path.join(upload_dir, 'SDE_DATA_BD_A8GNS_2003'))
+
+
+def test_prep_bag_creates_zip_package_in_bag_dir(shapefile, upload_dir):
     prep_bag(shapefile, upload_dir)
     assert 'SDE_DATA_BD_A8GNS_2003.zip' in \
         os.listdir(os.path.join(upload_dir, 'SDE_DATA_BD_A8GNS_2003'))
@@ -39,6 +46,13 @@ def test_prep_bag_returns_location(shapefile, upload_dir):
 def test_write_fgdc_writes_fgdc(shapefile, upload_dir):
     write_fgdc(shapefile, os.path.join(upload_dir, 'test.xml'))
     assert os.path.isfile(os.path.join(upload_dir, 'test.xml'))
+
+
+def test_flatten_zip_moves_all_members_to_top_level(shapefile):
+    with tempfile.TemporaryFile() as zf:
+        flatten_zip(shapefile, zf)
+        arx = ZipFile(zf)
+        assert 'SDE_DATA_BD_A8GNS_2003.cst' in arx.namelist()
 
 
 def test_uploadable_returns_layers_not_uploaded(layers_dir, upload_dir):
