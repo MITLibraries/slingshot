@@ -18,7 +18,8 @@ def prep_bag(layer, destination):
     try:
         write_fgdc(layer,
                    os.path.join(extracted, "%s.xml" % layer_name))
-        shutil.copy2(layer, extracted)
+        flatten_zip(layer,
+                    os.path.join(extracted, "%s.zip" % layer_name))
     except Exception as e:
         shutil.rmtree(extracted, ignore_errors=True)
         raise e
@@ -32,6 +33,13 @@ def write_fgdc(layer, filename):
                 with open(filename, 'wb') as fp:
                     fp.write(zf.read(f))
                 return
+
+
+def flatten_zip(layer, zipname):
+    with ZipFile(layer) as zf:
+        with ZipFile(zipname, 'w') as target:
+            for f in [m for m in zf.namelist() if os.path.basename(m)]:
+                target.writestr(os.path.basename(f), zf.read(f))
 
 
 def uploadable(layers, uploaded):
