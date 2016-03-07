@@ -77,3 +77,12 @@ def test_run_logs_failed_layers_to_stdout(runner, layers_dir):
         res = runner.invoke(main, ['run', layers_dir, store,
                                    'http://localhost'])
         assert 'SDE_DATA_BD_A8GNS_2003.zip failed' in res.output
+
+
+def test_run_fails_after_consecutive_failures(runner, layers_dir):
+    with requests_mock.Mocker() as m:
+        store = tempfile.mkdtemp()
+        m.post('http://localhost', status_code=500)
+        res = runner.invoke(main, ['run', layers_dir, store,
+                                   'http://localhost', '--fail-after', 1])
+        assert 'Maximum number of consecutive failures' in res.output
