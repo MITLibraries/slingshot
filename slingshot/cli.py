@@ -28,7 +28,9 @@ def main():
 @click.option('--username', help="Username for kepler submission.")
 @click.option('--password',
               help="Password for kepler submission. Omit for prompt.")
-def run(layers, store, url, namespace, username, password):
+@click.option('--fail-after', default=5,
+              help="Stop after number of consecutive failures. Default is 5.")
+def run(layers, store, url, namespace, username, password, fail_after):
     """Create and upload bags to the specified endpoint.
 
     This script will create bags from all the layers in the LAYERS
@@ -50,6 +52,7 @@ def run(layers, store, url, namespace, username, password):
     auth = username, password
     if not all(auth):
         auth = None
+    failures = 0
     for data_layer in uploadable(layers, store):
         bag = prep_bag(os.path.join(layers, data_layer), store)
         try:
@@ -57,10 +60,15 @@ def run(layers, store, url, namespace, username, password):
             bag_name = make_uuid(os.path.basename(bag), namespace)
             with temp_archive(bag, bag_name) as zf:
                 submit(zf, url, auth)
+            click.echo("%sZ: %s uploaded" % (datetime.utcnow().isoformat(),
+                                             data_layer))
+            failures = 0
         except Exception as e:
             shutil.rmtree(bag, ignore_errors=True)
+            failures += 1
             click.echo("%sZ: %s failed with %r" %
                        (datetime.utcnow().isoformat(), data_layer, e))
-            raise e
-        click.echo("%sZ: %s uploaded" % (datetime.utcnow().isoformat(),
-                                         data_layer))
+            if failures >= fail_after:
+                click.echo("%sZ: Maximum number of consecutive failures (%d)" %
+                           (datetime.utcnow().isoformat(), failures))
+                raise e
