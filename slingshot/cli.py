@@ -1,5 +1,6 @@
 # -*- coding: utf-8 -*-
 from __future__ import absolute_import
+from datetime import datetime
 import os
 import shutil
 
@@ -58,4 +59,8 @@ def run(layers, store, url, namespace, username, password):
                 submit(zf, url, auth)
         except Exception as e:
             shutil.rmtree(bag, ignore_errors=True)
+            click.echo("%sZ: %s failed with %r" %
+                       (datetime.utcnow().isoformat(), data_layer, e))
             raise e
+        click.echo("%sZ: %s uploaded" % (datetime.utcnow().isoformat(),
+                                         data_layer))

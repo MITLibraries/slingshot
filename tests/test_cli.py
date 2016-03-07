@@ -59,3 +59,21 @@ def test_run_uses_authentication(runner, layers_dir):
                              '--username', 'foo', '--password', 'bar'])
     assert m.request_history[0].headers['Authorization'] == \
         'Basic Zm9vOmJhcg=='
+
+
+def test_run_logs_uploaded_layers_to_stdout(runner, layers_dir):
+    with requests_mock.Mocker() as m:
+        store = tempfile.mkdtemp()
+        m.post('http://localhost')
+        res = runner.invoke(main, ['run', layers_dir, store,
+                                   'http://localhost'])
+        assert 'SDE_DATA_BD_A8GNS_2003.zip uploaded' in res.output
+
+
+def test_run_logs_failed_layers_to_stdout(runner, layers_dir):
+    with requests_mock.Mocker() as m:
+        store = tempfile.mkdtemp()
+        m.post('http://localhost', status_code=500)
+        res = runner.invoke(main, ['run', layers_dir, store,
+                                   'http://localhost'])
+        assert 'SDE_DATA_BD_A8GNS_2003.zip failed' in res.output
