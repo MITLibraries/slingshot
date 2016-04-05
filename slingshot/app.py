@@ -11,19 +11,20 @@ from zipfile import ZipFile
 import requests
 
 
-def prep_bag(layer, destination):
+def make_bag_dir(layer, destination):
     layer_name = os.path.splitext(os.path.basename(layer))[0]
     extracted = os.path.join(destination, layer_name)
     os.mkdir(extracted)
-    try:
-        write_fgdc(layer,
-                   os.path.join(extracted, "%s.xml" % layer_name))
-        flatten_zip(layer,
-                    os.path.join(extracted, "%s.zip" % layer_name))
-    except Exception as e:
-        shutil.rmtree(extracted, ignore_errors=True)
-        raise e
     return extracted
+
+
+def prep_bag(layer, bag_dir):
+    layer_name = os.path.splitext(os.path.basename(layer))[0]
+    write_fgdc(layer,
+               os.path.join(bag_dir, "%s.xml" % layer_name))
+    flatten_zip(layer,
+                os.path.join(bag_dir, "%s.zip" % layer_name))
+    return bag_dir
 
 
 def write_fgdc(layer, filename):

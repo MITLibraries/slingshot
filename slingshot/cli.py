@@ -7,7 +7,7 @@ import shutil
 import bagit
 import click
 
-from slingshot import (make_uuid, submit, temp_archive, prep_bag,
+from slingshot import (make_uuid, submit, temp_archive, prep_bag, make_bag_dir,
                        uploadable,)
 
 
@@ -54,9 +54,10 @@ def run(layers, store, url, namespace, username, password, fail_after):
         auth = None
     failures = 0
     for data_layer in uploadable(layers, store):
-        bag = prep_bag(os.path.join(layers, data_layer), store)
+        layer = os.path.join(layers, data_layer)
+        bag = make_bag_dir(layer, store)
         try:
-            bagit.make_bag(bag)
+            bagit.make_bag(prep_bag(layer, bag))
             bag_name = make_uuid(os.path.basename(bag), namespace)
             with temp_archive(bag, bag_name) as zf:
                 submit(zf, url, auth)
