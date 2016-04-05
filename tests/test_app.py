@@ -10,7 +10,7 @@ import requests
 import requests_mock
 
 from slingshot.app import (temp_archive, submit, make_uuid, write_fgdc,
-                           prep_bag, uploadable, flatten_zip)
+                           prep_bag, uploadable, flatten_zip, make_bag_dir)
 
 
 @pytest.fixture
@@ -18,29 +18,24 @@ def upload_dir():
     return tempfile.mkdtemp()
 
 
-def test_prep_bag_removes_bag_dir_when_errors(shapefile, upload_dir):
-    with patch('slingshot.app.write_fgdc') as mk:
-        mk.side_effect = Exception()
-        with pytest.raises(Exception):
-            prep_bag(shapefile, upload_dir)
-    assert not os.listdir(upload_dir)
+def test_make_bag_dir_creates_directory(shapefile, upload_dir):
+    make_bag_dir(shapefile, upload_dir)
+    assert os.path.isdir(os.path.join(upload_dir, 'SDE_DATA_BD_A8GNS_2003'))
+
+
+def test_make_bag_dir_returns_dir_name(shapefile, upload_dir):
+    assert make_bag_dir(shapefile, upload_dir) == \
+        os.path.join(upload_dir, 'SDE_DATA_BD_A8GNS_2003')
 
 
 def test_prep_bag_creates_fgdc_in_bag_dir(shapefile, upload_dir):
     prep_bag(shapefile, upload_dir)
-    assert 'SDE_DATA_BD_A8GNS_2003.xml' in \
-        os.listdir(os.path.join(upload_dir, 'SDE_DATA_BD_A8GNS_2003'))
+    assert 'SDE_DATA_BD_A8GNS_2003.xml' in os.listdir(upload_dir)
 
 
 def test_prep_bag_creates_zip_package_in_bag_dir(shapefile, upload_dir):
     prep_bag(shapefile, upload_dir)
-    assert 'SDE_DATA_BD_A8GNS_2003.zip' in \
-        os.listdir(os.path.join(upload_dir, 'SDE_DATA_BD_A8GNS_2003'))
-
-
-def test_prep_bag_returns_location(shapefile, upload_dir):
-    assert prep_bag(shapefile, upload_dir) == \
-        os.path.join(upload_dir, 'SDE_DATA_BD_A8GNS_2003')
+    assert 'SDE_DATA_BD_A8GNS_2003.zip' in os.listdir(upload_dir)
 
 
 def test_write_fgdc_writes_fgdc(shapefile, upload_dir):

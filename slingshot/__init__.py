@@ -3,7 +3,7 @@
 Slingshot
 """
 
-from .app import (make_uuid, submit, temp_archive, prep_bag,
+from .app import (make_uuid, submit, temp_archive, prep_bag, make_bag_dir,
                   uploadable,)
 
 
