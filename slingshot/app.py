@@ -29,6 +29,8 @@ def prep_bag(layer, bag_dir):
 
 def write_fgdc(layer, filename):
     with ZipFile(layer) as zf:
+        if len([f for f in zf.namelist() if f.endswith('.xml')]) != 1:
+            raise Exception("Could not find FGDC metadata.")
         for f in zf.namelist():
             if f.endswith('.xml'):
                 with open(filename, 'wb') as fp:
