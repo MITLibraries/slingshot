@@ -43,6 +43,11 @@ def test_write_fgdc_writes_fgdc(shapefile, upload_dir):
     assert os.path.isfile(os.path.join(upload_dir, 'test.xml'))
 
 
+def test_write_fgdc_raises_error_when_no_xml(no_xml, upload_dir):
+    with pytest.raises(Exception):
+        write_fgdc(no_xml, os.path.join(upload_dir, 'test.xml'))
+
+
 def test_flatten_zip_moves_all_members_to_top_level(shapefile):
     with tempfile.TemporaryFile() as zf:
         flatten_zip(shapefile, zf)

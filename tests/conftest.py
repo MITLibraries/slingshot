@@ -35,6 +35,11 @@ def shapefile():
 
 
 @pytest.fixture
+def no_xml(shapefile):
+    return _data_file('fixtures/no_xml.zip')
+
+
+@pytest.fixture
 def layers_dir(shapefile):
     d = tempfile.mkdtemp()
     shutil.copy2(shapefile, d)
