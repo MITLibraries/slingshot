@@ -5,6 +5,7 @@ import os
 import shutil
 
 import bagit
+import boto3
 import click
 
 from slingshot import (flatten_zip, Kepler, make_bag_dir, make_uuid,
@@ -28,9 +29,13 @@ def main():
 @click.option('--username', help="Username for kepler submission.")
 @click.option('--password',
               help="Password for kepler submission. Omit for prompt.")
+@click.option('--s3-key', prompt=True, help="S3 access key id")
+@click.option('--s3-secret', prompt=True, help='S3 secret access key')
+@click.option('--s3-bucket', default='kepler', help='S3 bucket name')
 @click.option('--fail-after', default=5,
               help="Stop after number of consecutive failures. Default is 5.")
-def run(layers, store, url, namespace, username, password, fail_after):
+def run(layers, store, url, namespace, username, password, fail_after,
+        s3_key, s3_secret, s3_bucket):
     """Create and upload bags to the specified endpoint.
 
     This script will create bags from all the layers in the LAYERS
@@ -53,6 +58,8 @@ def run(layers, store, url, namespace, username, password, fail_after):
     if not all(auth):
         auth = None
     kepler = Kepler(url, auth)
+    s3 = boto3.client('s3', aws_access_key_id=s3_key,
+                      aws_secret_access_key=s3_secret)
     failures = 0
     for layer in [l for l in os.listdir(layers) if l.endswith('.zip')]:
         archive = os.path.join(layers, layer)
@@ -68,8 +75,7 @@ def run(layers, store, url, namespace, username, password, fail_after):
                             os.path.join(bag_dir, '{}.zip'.format(layer_name)))
                 bagit.make_bag(bag_dir)
                 with temp_archive(bag_dir, layer_uuid) as zf:
-                    # upload to s3
-                    pass
+                    s3.upload_file(zf, s3_bucket, layer_uuid)
                 kepler.submit_job(layer_uuid)
                 click.echo('{}Z: {} uploaded'.format(
                     datetime.utcnow().isoformat(), layer_name))
