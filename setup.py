@@ -30,6 +30,7 @@ setup(
     packages=find_packages(exclude=['tests']),
     install_requires=[
         'bagit',
+        'boto3',
         'click',
         'requests',
     ],

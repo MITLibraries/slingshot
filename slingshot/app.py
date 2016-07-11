@@ -1,7 +1,6 @@
 # -*- coding: utf-8 -*-
 from __future__ import absolute_import
 import contextlib
-import io
 import os
 import shutil
 import tempfile
@@ -11,24 +10,41 @@ from zipfile import ZipFile
 import requests
 
 
-def make_bag_dir(layer, destination):
-    layer_name = os.path.splitext(os.path.basename(layer))[0]
+class Kepler(object):
+    def __init__(self, url=None, auth=None):
+        if url:
+            self.url = url
+        self.session = requests.Session()
+        self.session.auth = auth
+
+    @property
+    def url(self):
+        return self._url
+
+    @url.setter
+    def url(self, url):
+        self._url = url.rstrip('/')
+
+    def status(self, layer):
+        r = self.session.get('{}/{}'.format(self.url, layer))
+        if r.status_code == 404:
+            return None
+        r.raise_for_status()
+        return r.json().get('status')
+
+    def submit_job(self, layer):
+        r = self.session.put('{}/{}'.format(self.url, layer))
+        r.raise_for_status()
+
+
+def make_bag_dir(layer_name, destination):
     extracted = os.path.join(destination, layer_name)
     os.mkdir(extracted)
     return extracted
 
 
-def prep_bag(layer, bag_dir):
-    layer_name = os.path.splitext(os.path.basename(layer))[0]
-    write_fgdc(layer,
-               os.path.join(bag_dir, "%s.xml" % layer_name))
-    flatten_zip(layer,
-                os.path.join(bag_dir, "%s.zip" % layer_name))
-    return bag_dir
-
-
-def write_fgdc(layer, filename):
-    with ZipFile(layer) as zf:
+def write_fgdc(archive, filename):
+    with ZipFile(archive) as zf:
         if len([f for f in zf.namelist() if f.endswith('.xml')]) != 1:
             raise Exception("Could not find FGDC metadata.")
         for f in zf.namelist():
@@ -38,25 +54,11 @@ def write_fgdc(layer, filename):
                 return
 
 
-def flatten_zip(layer, zipname):
-    with ZipFile(layer) as zf:
+def flatten_zip(archive, zipname):
+    with ZipFile(archive) as zf:
         with ZipFile(zipname, 'w') as target:
             for f in [m for m in zf.namelist() if os.path.basename(m)]:
                 target.writestr(os.path.basename(f), zf.read(f))
-
-
-def uploadable(layers, uploaded):
-    loaded_dirs = [d for d in os.listdir(uploaded)
-                   if os.path.isdir(os.path.join(uploaded, d))]
-    for layer in [z for z in os.listdir(layers) if z.endswith('.zip')]:
-        if os.path.splitext(layer)[0] not in loaded_dirs:
-            yield layer
-
-
-def submit(archive, url, auth=None):
-    r = requests.post(url, files={'file': io.open(archive, 'rb')},
-                      auth=auth)
-    r.raise_for_status()
 
 
 def make_uuid(value, namespace):
