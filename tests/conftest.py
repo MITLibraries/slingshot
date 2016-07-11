@@ -5,6 +5,7 @@ import shutil
 import tempfile
 
 import pytest
+import requests_mock
 
 
 @pytest.yield_fixture(scope="session", autouse=True)
@@ -44,6 +45,20 @@ def layers_dir(shapefile):
     d = tempfile.mkdtemp()
     shutil.copy2(shapefile, d)
     return d
+
+
+@pytest.yield_fixture
+def kepler():
+    with requests_mock.Mocker() as m:
+        m.register_uri('GET', '/failed/47458e22-8e50-5b43-ac80-b662a1077af1',
+                       json={'status': 'FAILED'})
+        m.register_uri('GET', '/404/47458e22-8e50-5b43-ac80-b662a1077af1',
+                       status_code=404)
+        m.register_uri('GET',
+                       '/completed/47458e22-8e50-5b43-ac80-b662a1077af1',
+                       json={'status': 'COMPLETED'})
+        m.register_uri('PUT', requests_mock.ANY)
+        yield m
 
 
 def _data_file(name):
