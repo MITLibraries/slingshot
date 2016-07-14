@@ -55,6 +55,13 @@ def test_tmp_archive_removes_archive(layer):
     assert not os.path.exists(arxiv)
 
 
+def test_kepler_requests_json_for_status(kepler):
+    k = Kepler('mock://example.com/completed/')
+    k.status('47458e22-8e50-5b43-ac80-b662a1077af1')
+    assert kepler.request_history[0].headers.get('Accept') == \
+        'application/json'
+
+
 def test_kepler_returns_status(kepler):
     k = Kepler('mock://example.com/completed/')
     assert k.status('47458e22-8e50-5b43-ac80-b662a1077af1') == 'COMPLETED'
