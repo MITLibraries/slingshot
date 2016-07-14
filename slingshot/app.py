@@ -26,7 +26,8 @@ class Kepler(object):
         self._url = url.rstrip('/')
 
     def status(self, layer):
-        r = self.session.get('{}/{}'.format(self.url, layer))
+        r = self.session.get('{}/{}'.format(self.url, layer),
+                             headers={'Accept': 'application/json'})
         if r.status_code == 404:
             return None
         r.raise_for_status()
