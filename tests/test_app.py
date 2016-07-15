@@ -25,6 +25,15 @@ def test_make_bag_dir_returns_dir_name(upload_dir):
         os.path.join(upload_dir, 'TEST_BAG')
 
 
+def test_make_bag_dir_overwrites_existing_dir(upload_dir):
+    bag = os.path.join(upload_dir, 'TEST_BAG')
+    os.mkdir(bag)
+    with open(os.path.join(bag, 'foobar'), 'wb') as fp:
+        fp.write("I shouldn't be here.")
+    make_bag_dir('TEST_BAG', upload_dir)
+    assert not os.path.isfile(os.path.join(bag, 'foobar'))
+
+
 def test_write_fgdc_writes_fgdc(shapefile, upload_dir):
     write_fgdc(shapefile, os.path.join(upload_dir, 'test.xml'))
     assert os.path.isfile(os.path.join(upload_dir, 'test.xml'))
