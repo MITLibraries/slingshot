@@ -40,7 +40,11 @@ class Kepler(object):
 
 def make_bag_dir(layer_name, destination):
     extracted = os.path.join(destination, layer_name)
-    os.mkdir(extracted)
+    try:
+        os.mkdir(extracted)
+    except OSError:
+        shutil.rmtree(extracted)
+        os.mkdir(extracted)
     return extracted
 
 
