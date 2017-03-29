@@ -30,8 +30,11 @@ setup(
     packages=find_packages(exclude=['tests']),
     install_requires=[
         'bagit',
-        'boto3',
         'click',
+        'geoalchemy2',
+        'geomet',
+        'plyplus',
+        'pyshp',
         'requests',
     ],
     entry_points={

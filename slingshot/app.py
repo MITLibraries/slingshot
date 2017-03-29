@@ -1,102 +1,207 @@
 # -*- coding: utf-8 -*-
 from __future__ import absolute_import
-import contextlib
+import base64
+import json
 import os
 import shutil
-import tempfile
 import uuid
 from zipfile import ZipFile
 
+import bagit
+from geomet import wkt
+from ogre.xml import FGDCParser
 import requests
+from shapefile import Reader
+
+from slingshot.db import engine, table
+from slingshot.proj import parser
+from slingshot.record import create_record as _create_record
 
 
-class Kepler(object):
-    def __init__(self, url=None, auth=None):
-        if url:
-            self.url = url
-        self.session = requests.Session()
-        self.session.auth = auth
-
-    @property
-    def url(self):
-        return self._url
-
-    @url.setter
-    def url(self, url):
-        self._url = url.rstrip('/')
-
-    def status(self, layer):
-        r = self.session.get('{}/{}'.format(self.url, layer),
-                             headers={'Accept': 'application/json'})
-        if r.status_code == 404:
-            return None
-        r.raise_for_status()
-        return r.json().get('status')
-
-    def submit_job(self, layer):
-        r = self.session.put('{}/{}'.format(self.url, layer))
-        r.raise_for_status()
+GEOM_TYPES = {
+    1: 'POINT',
+    3: 'LINESTRING',
+    5: 'POLYGON',
+    8: 'MULTIPOINT',
+}
 
 
-def make_bag_dir(layer_name, destination):
-    extracted = os.path.join(destination, layer_name)
+def unpack_zip(source, destination):
+    with ZipFile(source) as zf:
+        for f in [m for m in zf.namelist() if not m.endswith('/')]:
+            f_dest = os.path.join(destination, os.path.basename(f))
+            with open(f_dest, 'wb') as fp:
+                fp.write(zf.read(f))
+
+
+def make_bag_dir(source, dest_dir, overwrite=False):
+    layer = os.path.basename(source)
+    layer_name = os.path.splitext(layer)[0]
+    destination = os.path.join(dest_dir, layer_name)
     try:
-        os.mkdir(extracted)
+        os.mkdir(destination)
     except OSError:
-        shutil.rmtree(extracted)
-        os.mkdir(extracted)
-    return extracted
+        if overwrite:
+            shutil.rmtree(destination)
+            os.mkdir(destination)
+        else:
+            raise
+    return destination
 
 
-def write_fgdc(archive, filename):
-    with ZipFile(archive) as zf:
-        if len([f for f in zf.namelist() if f.endswith('.xml')]) != 1:
-            raise Exception("Could not find FGDC metadata.")
-        for f in zf.namelist():
-            if f.endswith('.xml'):
-                with open(filename, 'wb') as fp:
-                    fp.write(zf.read(f))
-                return
+def create_record(bag, public, secure, **kwargs):
+    record = _create_record(bag.fgdc, FGDCParser, **kwargs)
+    gs = public if record.dc_rights_s == 'Public' else secure
+    gs = gs.rstrip('/')
+    refs = {
+        'http://www.opengis.net/def/serviceType/ogc/wms': '{}/wms'.format(gs),
+        'http://www.opengis.net/def/serviceType/ogc/wfs': '{}/wfs'.format(gs),
+    }
+    record.dct_references_s = refs
+    return record
 
 
-def flatten_zip(archive, zipname):
-    with ZipFile(archive) as zf:
-        with ZipFile(zipname, 'w') as target:
-            for f in [m for m in zf.namelist() if os.path.basename(m)]:
-                target.writestr(os.path.basename(f), zf.read(f))
+def register_layer(layer_name, geoserver, workspace, datastore):
+    url = '{}/rest/workspaces/{}/datastores/{}/featuretypes'.format(
+        geoserver.rstrip('/'), workspace, datastore)
+    data = '<featureType><name>{}</name></featureType>'.format(layer_name)
+    r = requests.post(url, headers={'Content-type': 'text/xml'}, data=data)
+    r.raise_for_status()
 
 
-def make_uuid(value, namespace):
+def index_layer(record, solr):
+    url = '{}/update/json/docs'.format(solr.rstrip('/'))
+    r = requests.post(url, json=record)
+    r.raise_for_status()
+
+
+def make_uuid(value, namespace='mit.edu'):
     try:
         ns = uuid.uuid5(uuid.NAMESPACE_DNS, namespace)
         uid = uuid.uuid5(ns, value)
     except UnicodeDecodeError:
         # Python 2 requires a byte string for the second argument.
         # Python 3 requires a unicode string for the second argument.
-        value, namespace = [_bytes(s) for s in (value, namespace)]
+        value, namespace = [bytearray(s, 'utf-8') for s in (value, namespace)]
         ns = uuid.uuid5(uuid.NAMESPACE_DNS, namespace)
         uid = uuid.uuid5(ns, value)
-    return str(uid)
+    return uid
 
 
-@contextlib.contextmanager
-def temp_archive(data, name):
-    """Create a temporary archive that is automatically removed.
+def make_slug(name):
+    uid = make_uuid(name)
+    b32 = base64.b32encode(uid.bytes[:8])
+    return 'mit-' + b32.decode('ascii').rstrip('=').lower()
 
-    This context manager will create a temporary ZIP archive of data
-    the provided name. A `.zip` suffix will be appended to the name.
-    The archive is deleted upon exiting the content manager.
+
+class GeoBag(object):
+    def __init__(self, bag):
+        self.bag = bagit.Bag(bag)
+        self._record = None
+
+    @classmethod
+    def create(cls, directory):
+        bagit.make_bag(directory)
+        return cls(directory)
+
+    @property
+    def payload_dir(self):
+        return os.path.join(str(self.bag), 'data')
+
+    @property
+    def name(self):
+        return os.path.splitext(os.path.basename(self.shp))[0]
+
+    @property
+    def record(self):
+        if self._record is None:
+            rec = os.path.join(self.payload_dir, 'gbl_record.json')
+            with open(rec) as fp:
+                self._record = json.load(fp)
+        return self._record
+
+    @record.setter
+    def record(self, value):
+        path = os.path.join(self.payload_dir, 'gbl_record.json')
+        with open(path, 'wb') as fp:
+            json.dump(value, fp)
+        self._record = value
+
+    @property
+    def fgdc(self):
+        return self._file_by_ext('.xml')
+
+    @property
+    def shp(self):
+        return self._file_by_ext('.shp')
+
+    @property
+    def prj(self):
+        return self._file_by_ext('.prj')
+
+    @property
+    def cst(self):
+        return self._file_by_ext('.cst')
+
+    def save(self):
+        self.bag.save(manifests=True)
+
+    def is_valid(self):
+        return self.bag.is_valid()
+
+    def _file_by_ext(self, ext):
+        fnames = [f for f in self.bag.payload_files()
+                  if f.lower().endswith(ext.lower())]
+        if len(fnames) > 1:
+            raise Exception('Multiple files with extension {}'.format(ext))
+        elif not fnames:
+            raise Exception('Could not find file with extension {}'
+                            .format(ext))
+        return os.path.join(str(self.bag), fnames.pop())
+
+
+def get_srid(prj):
+    """Retrieve the SRID from the provided prj file.
+
+    Takes the path to a .prj file. It will attempt to extract SRID
+    and return as an int.
     """
-    tmp = tempfile.gettempdir()
-    archive_name = os.path.join(tmp, name)
-    root_dir = os.path.dirname(os.path.normpath(data))
-    base_dir = os.path.basename(os.path.normpath(data))
+    with open(prj) as fp:
+        wkt = fp.read()
+    res = parser.parse(wkt)
+    if wkt.startswith('PROJCS'):
+        srid = res.select('projcs > authority > code *')[0]
+    elif wkt.startswith('GEOGCS'):
+        srid = res.select('geogcs > authority > code *')[0]
+    else:
+        raise Exception('Cannot retrieve SRID')
+    return int(srid.strip('"'))
+
+
+def load_layer(bag):
+    """Load the shapefile into PostGIS."""
+    srid = get_srid(bag.prj)
     try:
-        archive = shutil.make_archive(archive_name, 'zip', root_dir, base_dir)
-        yield archive
-    finally:
-        os.remove(archive)
-
-
-def _bytes(value):
-    return bytearray(value, 'utf-8')
+        with open(bag.cst) as fp:
+            encoding = fp.read().strip()
+    except:
+        encoding = 'ISO-8859-1'
+    sf = Reader(bag.shp)
+    geom_type = GEOM_TYPES[sf.shapeType]
+    fields = sf.fields[1:]
+    field_names = [f[0] for f in fields]
+    t = table(bag.name, geom_type, srid, fields, encoding)
+    if t.exists():
+        raise Exception('Table {} already exists'.format(bag.name))
+    t.create()
+    try:
+        with engine().begin() as conn:
+            for record in sf.iterShapeRecords():
+                geom = wkt.dumps(record.shape.__geo_interface__)
+                ins = t.insert().values(
+                    geom='SRID={};{}'.format(srid, geom),
+                    **dict(zip(field_names, record.record)))
+                conn.execute(ins)
+    except:
+        t.drop()
+        raise
