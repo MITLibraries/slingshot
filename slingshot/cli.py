@@ -66,16 +66,31 @@ def bag(layers, store, db_uri, workspace, public, secure):
 @click.option('--workspace', default='mit')
 @click.option('--datastore', default='data')
 @click.option('--public', envvar='PUBLIC_GEOSERVER')
+@click.option('--public-user', envvar='PUBLIC_GEOSERVER_USER')
+@click.option('--public-password', envvar='PUBLIC_GEOSERVER_PASSWORD')
 @click.option('--secure', envvar='SECURE_GEOSERVER')
+@click.option('--secure-user', envvar='SECURE_GEOSERVER_USER')
+@click.option('--secure-password', envvar='SECURE_GEOSERVER_PASSWORD')
 @click.option('--solr', envvar='SOLR')
-def publish(bags, workspace, datastore, public, secure, solr):
+@click.option('--solr-user', envvar='SOLR_USER')
+@click.option('--solr-password', envvar='SOLR_PASSWORD')
+def publish(bags, workspace, datastore, public, public_user, public_password,
+            secure, secure_user, secure_password, solr, solr_user,
+            solr_password):
+    public_auth = (public_user, public_password) if public_user and \
+        public_password else ()
+    secure_auth = (secure_user, secure_password) if secure_user and \
+        secure_password else ()
+    solr_auth = (solr_user, solr_password) if solr_user and solr_password \
+        else ()
     for b in os.listdir(bags):
         try:
             bag = GeoBag(os.path.join(bags, b))
-            geoserver = public if bag.record['dc_rights_s'] == 'Public' \
-                else secure
-            register_layer(bag.name, geoserver, workspace, datastore)
-            index_layer(bag.record)
+            geoserver = public if bag.is_public() else secure
+            geoserver_auth = public_auth if bag.is_public() else secure_auth
+            register_layer(bag.name, geoserver, workspace, datastore,
+                           auth=geoserver_auth)
+            index_layer(bag.record, solr, auth=solr_auth)
             click.echo('Loaded {}'.format(bag.name))
         except Exception as e:
             click.echo('Failed loading {}: {}'.format(b, e))

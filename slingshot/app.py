@@ -61,17 +61,18 @@ def create_record(bag, public, secure, **kwargs):
     return record
 
 
-def register_layer(layer_name, geoserver, workspace, datastore):
+def register_layer(layer_name, geoserver, workspace, datastore, auth=None):
     url = '{}/rest/workspaces/{}/datastores/{}/featuretypes'.format(
         geoserver.rstrip('/'), workspace, datastore)
     data = '<featureType><name>{}</name></featureType>'.format(layer_name)
-    r = requests.post(url, headers={'Content-type': 'text/xml'}, data=data)
+    r = requests.post(url, auth=auth, headers={'Content-type': 'text/xml'},
+                      data=data)
     r.raise_for_status()
 
 
-def index_layer(record, solr):
+def index_layer(record, solr, auth=None):
     url = '{}/update/json/docs'.format(solr.rstrip('/'))
-    r = requests.post(url, json=record)
+    r = requests.post(url, json=record, auth=auth)
     r.raise_for_status()
 
 
@@ -103,6 +104,9 @@ class GeoBag(object):
     def create(cls, directory):
         bagit.make_bag(directory)
         return cls(directory)
+
+    def is_public(self):
+        return self.record.get('dc_rights_s', '').lower() == 'public'
 
     @property
     def payload_dir(self):

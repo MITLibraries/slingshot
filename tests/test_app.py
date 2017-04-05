@@ -107,6 +107,10 @@ def test_geobag_create_creates_new_bag(shapefile_unpacked):
     assert b.is_valid()
 
 
+def test_geobag_returns_access(bag):
+    assert GeoBag(bag).is_public() == True
+
+
 def test_geobag_returns_payload_dir(bag):
     assert GeoBag(bag).payload_dir == os.path.join(bag, 'data')
 
