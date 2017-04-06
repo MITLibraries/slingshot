@@ -4,6 +4,7 @@ import base64
 import json
 import os
 import shutil
+import tempfile
 import uuid
 from zipfile import ZipFile
 
@@ -182,6 +183,55 @@ def get_srid(prj):
     return int(srid.strip('"'))
 
 
+def force_utf8(value, encoding):
+    """Force a value into UTF-8.
+
+    The value could be either a bytes object, in which case ``encoding``
+    is used to decode before re-encoding in UTF-8. Otherwise, it is
+    assumed to be a unicode object and is encoded as UTF-8.
+    """
+    if isinstance(value, bytes):
+        value = value.decode(encoding)
+    return value.encode('utf-8')
+
+
+def prep_field(field, _type, encoding):
+    """Prepare a field to be written out for PostGres COPY.
+
+    This uses the TEXT format with the default ``\\N`` marker for NULL
+    values.
+    """
+    if field is None:
+        return r'\N'
+    if _type == 'C':
+        field = force_utf8(field, encoding)
+        quoteable = ('\t', '\n', '\r')
+        if any([s in field for s in quoteable]) or field == '\.':
+            field = r'\{}'.format(field)
+        return field
+    return str(field)
+
+
+def multiply(geometry):
+    """Force a GeoJSON geometry to its Multi* counterpart.
+
+    This allows a table to load both polygons and multipolygons, for
+    example.
+    """
+    _type = geometry['type'].lower()
+    if _type == 'polygon':
+        return {
+            'type': 'MultiPolygon',
+            'coordinates': [geometry['coordinates']]
+        }
+    elif _type == 'linestring':
+        return {
+            'type': 'MultiLineString',
+            'coordinates': [geometry['coordinates']]
+        }
+    return geometry
+
+
 def load_layer(bag):
     """Load the shapefile into PostGIS."""
     srid = get_srid(bag.prj)
@@ -193,19 +243,28 @@ def load_layer(bag):
     sf = Reader(bag.shp)
     geom_type = GEOM_TYPES[sf.shapeType]
     fields = sf.fields[1:]
-    field_names = [f[0] for f in fields]
+    types = [f[1] for f in fields]
     t = table(bag.name, geom_type, srid, fields, encoding)
     if t.exists():
         raise Exception('Table {} already exists'.format(bag.name))
     t.create()
-    try:
-        with engine().begin() as conn:
+    with tempfile.TemporaryFile() as fp:
+        try:
             for record in sf.iterShapeRecords():
-                geom = wkt.dumps(record.shape.__geo_interface__)
-                ins = t.insert().values(
-                    geom='SRID={};{}'.format(srid, geom),
-                    **dict(zip(field_names, record.record)))
-                conn.execute(ins)
-    except:
-        t.drop()
-        raise
+                geom = 'SRID={};{}'.format(
+                        srid,
+                        wkt.dumps(multiply(record.shape.__geo_interface__)))
+                rec = [prep_field(f, types[i], encoding) for i, f in
+                       enumerate(record.record)] + [geom]
+                fp.write('\t'.join(rec) + '\n')
+            with engine().begin() as conn:
+                fp.flush()
+                fp.seek(0)
+                cursor = conn.connection.cursor()
+                cursor.copy_from(fp, '"{}"'.format(bag.name))
+            with engine().connect() as conn:
+                conn.execute('CREATE INDEX "idx_{}_geom" ON "{}" USING GIST '
+                             '(geom)'.format(bag.name, bag.name))
+        except:
+            t.drop()
+            raise
