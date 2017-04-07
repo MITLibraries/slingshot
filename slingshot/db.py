@@ -45,8 +45,7 @@ def _make_column(field, encoding):
         if f_prec == 0:
             return Column(f_name, Integer)
         else:
-            # TODO: Double?
-            return Column(f_name, Float(precision=15))
+            return Column(f_name, Float)
     elif f_type == 'D':
         return Column(f_name, Date)
     elif f_type == 'L':
