@@ -14,7 +14,7 @@ from ogre.xml import FGDCParser
 import requests
 from shapefile import Reader
 
-from slingshot.db import engine, table
+from slingshot.db import engine, multiply, prep_field, table
 from slingshot.proj import parser
 from slingshot.record import create_record as _create_record
 
@@ -183,55 +183,6 @@ def get_srid(prj):
     return int(srid.strip('"'))
 
 
-def force_utf8(value, encoding):
-    """Force a value into UTF-8.
-
-    The value could be either a bytes object, in which case ``encoding``
-    is used to decode before re-encoding in UTF-8. Otherwise, it is
-    assumed to be a unicode object and is encoded as UTF-8.
-    """
-    if isinstance(value, bytes):
-        value = value.decode(encoding)
-    return value.encode('utf-8')
-
-
-def prep_field(field, _type, encoding):
-    """Prepare a field to be written out for PostGres COPY.
-
-    This uses the TEXT format with the default ``\\N`` marker for NULL
-    values.
-    """
-    if field is None:
-        return r'\N'
-    if _type == 'C':
-        field = force_utf8(field, encoding)
-        quoteable = ('\t', '\n', '\r')
-        if any([s in field for s in quoteable]) or field == '\.':
-            field = r'\{}'.format(field)
-        return field
-    return str(field)
-
-
-def multiply(geometry):
-    """Force a GeoJSON geometry to its Multi* counterpart.
-
-    This allows a table to load both polygons and multipolygons, for
-    example.
-    """
-    _type = geometry['type'].lower()
-    if _type == 'polygon':
-        return {
-            'type': 'MultiPolygon',
-            'coordinates': [geometry['coordinates']]
-        }
-    elif _type == 'linestring':
-        return {
-            'type': 'MultiLineString',
-            'coordinates': [geometry['coordinates']]
-        }
-    return geometry
-
-
 def load_layer(bag):
     """Load the shapefile into PostGIS."""
     srid = get_srid(bag.prj)
@@ -244,7 +195,7 @@ def load_layer(bag):
     geom_type = GEOM_TYPES[sf.shapeType]
     fields = sf.fields[1:]
     types = [f[1] for f in fields]
-    t = table(bag.name, geom_type, srid, fields, encoding)
+    t = table(bag.name, geom_type, srid, fields)
     if t.exists():
         raise Exception('Table {} already exists'.format(bag.name))
     t.create()

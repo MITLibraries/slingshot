@@ -108,7 +108,7 @@ def test_geobag_create_creates_new_bag(shapefile_unpacked):
 
 
 def test_geobag_returns_access(bag):
-    assert GeoBag(bag).is_public() == True
+    assert GeoBag(bag).is_public()
 
 
 def test_geobag_returns_payload_dir(bag):
@@ -120,8 +120,7 @@ def test_geobag_returns_layer_name(bag):
 
 
 def test_geobag_returns_record(bag):
-    assert GeoBag(bag).record == \
-        {u'dc_rights_s': u'Public', u'layer_slug_s': u'mit-34clfhaokfmkq'}
+    assert GeoBag(bag).record['layer_slug_s'] == u'mit-34clfhaokfmkq'
 
 
 def test_geobag_writes_record(bag):

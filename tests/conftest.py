@@ -45,9 +45,7 @@ def bag():
 
 @pytest.fixture
 def bags_dir(bag):
-    d = tempfile.mkdtemp()
-    shutil.copy2(bag, d)
-    return d
+    return os.path.dirname(bag)
 
 
 @pytest.fixture
@@ -58,6 +56,11 @@ def prj_4326():
 @pytest.fixture
 def prj_2249():
     return _data_file('fixtures/2249.prj')
+
+
+@pytest.fixture
+def fgdc():
+    return _data_file('fixtures/bermuda/data/bermuda.xml')
 
 
 def _data_file(name):
