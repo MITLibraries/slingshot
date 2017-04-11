@@ -1,15 +1,22 @@
 # -*- coding: utf-8 -*-
 from __future__ import absolute_import
-from datetime import datetime
 import os
 import shutil
+import traceback
 
-import bagit
-import boto3
 import click
 
-from slingshot import (flatten_zip, Kepler, make_bag_dir, make_uuid,
-                       temp_archive, write_fgdc)
+from slingshot.app import (
+    create_record,
+    GeoBag,
+    index_layer,
+    make_bag_dir,
+    make_slug,
+    register_layer,
+    unpack_zip,
+)
+from slingshot.app import load_layer
+from slingshot.db import engine, metadata
 
 
 @click.group()
@@ -23,70 +30,67 @@ def main():
                                           resolve_path=True))
 @click.argument('store', type=click.Path(exists=True, file_okay=False,
                                          resolve_path=True))
-@click.argument('url')
-@click.option('--namespace', default='arrowsmith.mit.edu',
-              help="Namespace used for generating UUID 5.")
-@click.option('--username', help="Username for kepler submission.")
-@click.option('--password',
-              help="Password for kepler submission. Omit for prompt.")
-@click.option('--s3-key', prompt=True, help="S3 access key id")
-@click.option('--s3-secret', prompt=True, help='S3 secret access key')
-@click.option('--s3-bucket', default='kepler', help='S3 bucket name')
-@click.option('--fail-after', default=5,
-              help="Stop after number of consecutive failures. Default is 5.")
-def run(layers, store, url, namespace, username, password, fail_after,
-        s3_key, s3_secret, s3_bucket):
-    """Create and upload bags to the specified endpoint.
-
-    This script will create bags from all the layers in the LAYERS
-    directory, uploading them to URL and storing them in the STORE
-    directory. Each layer should be in its own subdirectory.
-
-    Layers that already in exist in the STORE directory will be
-    skipped. This match is based solely on the names of the
-    subdirectories.
-
-    If a layer is not successfully uploaded it will not be placed in
-    the STORE directory.
-
-    The namespace option is used in generating a UUID 5 identifier
-    for the layer. The default value is arrowsmith.mit.edu.
-    """
-    if username and not password:
-        password = click.prompt('Password', hide_input=True)
-    auth = username, password
-    if not all(auth):
-        auth = None
-    kepler = Kepler(url, auth)
-    s3 = boto3.client('s3', aws_access_key_id=s3_key,
-                      aws_secret_access_key=s3_secret)
-    failures = 0
+@click.option('--db-uri', envvar='PG_DATABASE')
+@click.option('--workspace', default='mit')
+@click.option('--public', envvar='PUBLIC_GEOSERVER')
+@click.option('--secure', envvar='SECURE_GEOSERVER')
+def bag(layers, store, db_uri, workspace, public, secure):
+    engine.configure(db_uri)
+    metadata.bind = engine()
     for layer in [l for l in os.listdir(layers) if l.endswith('.zip')]:
-        archive = os.path.join(layers, layer)
-        layer_name = os.path.splitext(layer)[0]
-        layer_uuid = make_uuid(layer_name, namespace)
-        status = kepler.status(layer_uuid)
-        if not status or status.lower() == 'failed':
-            bag_dir = make_bag_dir(layer_name, store)
-            try:
-                write_fgdc(archive,
-                           os.path.join(bag_dir, '{}.xml'.format(layer_name)))
-                flatten_zip(archive,
-                            os.path.join(bag_dir, '{}.zip'.format(layer_name)))
-                bagit.make_bag(bag_dir)
-                with temp_archive(bag_dir, layer_uuid) as zf:
-                    s3.upload_file(zf, s3_bucket, layer_uuid)
-                kepler.submit_job(layer_uuid)
-                click.echo('{}Z: {} uploaded'.format(
-                    datetime.utcnow().isoformat(), layer_name))
-                failures = 0
-            except Exception as e:
-                shutil.rmtree(bag_dir, ignore_errors=True)
-                failures += 1
-                click.echo("%sZ: %s failed with %r" %
-                           (datetime.utcnow().isoformat(), layer_name, e))
-                if failures >= fail_after:
-                    click.echo(
-                        "%sZ: Maximum number of consecutive failures (%d)" %
-                        (datetime.utcnow().isoformat(), failures))
-                    raise e
+        source = os.path.join(layers, layer)
+        name = os.path.splitext(layer)[0]
+        dest = make_bag_dir(source, store)
+        try:
+            unpack_zip(source, dest)
+            bag = GeoBag.create(dest)
+            record = create_record(bag,
+                                   public=public,
+                                   secure=secure,
+                                   dc_format_s='Shapefile',
+                                   dc_type_s='Dataset',
+                                   layer_id_s='{}:{}'.format(workspace, name),
+                                   layer_slug_s=make_slug(name))
+            bag.record = record.as_dict()
+            bag.save()
+            load_layer(bag)
+            click.echo('Loaded layer {}'.format(name))
+        except Exception as e:
+            shutil.rmtree(dest, ignore_errors=True)
+            tb = traceback.format_exc()
+            click.echo('Failed creating bag {}: {}'.format(name, tb))
+
+
+@main.command()
+@click.argument('bags')
+@click.option('--workspace', default='mit')
+@click.option('--datastore', default='data')
+@click.option('--public', envvar='PUBLIC_GEOSERVER')
+@click.option('--public-user', envvar='PUBLIC_GEOSERVER_USER')
+@click.option('--public-password', envvar='PUBLIC_GEOSERVER_PASSWORD')
+@click.option('--secure', envvar='SECURE_GEOSERVER')
+@click.option('--secure-user', envvar='SECURE_GEOSERVER_USER')
+@click.option('--secure-password', envvar='SECURE_GEOSERVER_PASSWORD')
+@click.option('--solr', envvar='SOLR')
+@click.option('--solr-user', envvar='SOLR_USER')
+@click.option('--solr-password', envvar='SOLR_PASSWORD')
+def publish(bags, workspace, datastore, public, public_user, public_password,
+            secure, secure_user, secure_password, solr, solr_user,
+            solr_password):
+    public_auth = (public_user, public_password) if public_user and \
+        public_password else ()
+    secure_auth = (secure_user, secure_password) if secure_user and \
+        secure_password else ()
+    solr_auth = (solr_user, solr_password) if solr_user and solr_password \
+        else ()
+    for b in os.listdir(bags):
+        try:
+            bag = GeoBag(os.path.join(bags, b))
+            geoserver = public if bag.is_public() else secure
+            geoserver_auth = public_auth if bag.is_public() else secure_auth
+            register_layer(bag.name, geoserver, workspace, datastore,
+                           auth=geoserver_auth)
+            index_layer(bag.record, solr, auth=solr_auth)
+            click.echo('Loaded {}'.format(bag.name))
+        except Exception as e:
+            click.echo('Failed loading {}: {}'.format(b, e))

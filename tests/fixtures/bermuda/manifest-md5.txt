@@ -1,0 +1,7 @@
+0e4bb4efc30ec129e5003a18ea2103cf  data/bermuda.cst
+3a20b4071cc3946b388e59c093c7ab2d  data/bermuda.dbf
+293237e33df754aca1ef509fcd255603  data/bermuda.prj
+a3b1f42bbd2f1ebbf9b40daa93b3adf3  data/bermuda.shp
+abd3fb472170a6fa37496175c5fac4b2  data/bermuda.shx
+38d38fb5cdec69be8f8fb062bd86dd97  data/bermuda.xml
+6d4f419239fdca1e17cfe3bae06c56b1  data/gbl_record.json

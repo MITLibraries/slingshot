@@ -1,0 +1,27 @@
+{
+    "dc_creator_sm": [
+        "National Imagery and Mapping Agency"
+    ],
+    "dc_description_s": "Geographic feature names for Bermuda.",
+    "dc_format_s": "Shapefile",
+    "dc_publisher_s": "U.S. National Imagery and Mapping Agency (NIMA)",
+    "dc_rights_s": "Public",
+    "dc_subject_sm": [
+        "point",
+        "features",
+        "names"
+    ],
+    "dc_title_s": "Bermuda (Geographic Feature Names, 2003)",
+    "dc_type_s": "Dataset",
+    "dct_provenance_s": "MIT",
+    "dct_references_s": "{\"http://www.opengis.net/def/serviceType/ogc/wfs\": \"mock://example.com/public/wfs\", \"http://www.opengis.net/def/serviceType/ogc/wms\": \"mock://example.com/public/wms\"}",
+    "dct_spatial_sm": [
+        "Bermuda"
+    ],
+    "geoblacklight_version": "1.0",
+    "layer_geom_type_s": "Point",
+    "layer_id_s": "mit:bermuda",
+    "layer_modified_dt": "2017-04-10T18:41:05Z",
+    "layer_slug_s": "mit-34clfhaokfmkq",
+    "solr_geom": "ENVELOPE(-64.908056, -64.616667, 32.416667, 32.233333)"
+}

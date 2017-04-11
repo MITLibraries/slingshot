@@ -4,14 +4,11 @@ import os
 import shutil
 import tempfile
 
-import boto3
 import pytest
-import requests_mock
-from moto import mock_s3
 
 
 @pytest.yield_fixture(scope="session", autouse=True)
-def tmp_dir():
+def reset_temp_dir():
     cur_dir = os.path.dirname(os.path.realpath(__file__))
     tmp = tempfile.mkdtemp(dir=cur_dir)
     tempfile.tempdir = tmp
@@ -20,54 +17,50 @@ def tmp_dir():
         shutil.rmtree(tmp)
 
 
-@pytest.yield_fixture
-def s3():
-    with mock_s3():
-        client = boto3.client('s3', aws_access_key_id='foo',
-                              aws_secret_access_key='bar')
-        client.create_bucket(Bucket='kepler')
-        yield client
-
-
-@pytest.fixture
-def layer():
-    cur_dir = os.path.dirname(os.path.realpath(__file__))
-    return os.path.join(cur_dir, 'fixtures/grayscale')
-
-
-@pytest.fixture
-def zipped_bag():
-    cur_dir = os.path.dirname(os.path.realpath(__file__))
-    return os.path.join(cur_dir, 'fixtures/bag.zip')
-
-
 @pytest.fixture
 def shapefile():
-    return _data_file('fixtures/SDE_DATA_BD_A8GNS_2003.zip')
+    return _data_file('fixtures/bermuda.zip')
 
 
 @pytest.fixture
-def no_xml(shapefile):
+def shapefile_unpacked():
+    d = os.path.join(tempfile.mkdtemp(), 'bermuda')
+    b = _data_file('fixtures/bermuda_unpacked')
+    shutil.copytree(b, d)
+    return d
+
+
+@pytest.fixture
+def no_xml():
     return _data_file('fixtures/no_xml.zip')
 
 
 @pytest.fixture
-def layers_dir(shapefile):
-    d = tempfile.mkdtemp()
-    shutil.copy2(shapefile, d)
+def bag():
+    d = os.path.join(tempfile.mkdtemp(), 'bermuda')
+    b = _data_file('fixtures/bermuda')
+    shutil.copytree(b, d)
     return d
 
 
-@pytest.yield_fixture
-def kepler():
-    with requests_mock.Mocker() as m:
-        m.get('/failed/47458e22-8e50-5b43-ac80-b662a1077af1',
-              json={'status': 'FAILED'})
-        m.get('/404/47458e22-8e50-5b43-ac80-b662a1077af1', status_code=404)
-        m.get('/completed/47458e22-8e50-5b43-ac80-b662a1077af1',
-              json={'status': 'COMPLETED'})
-        m.put(requests_mock.ANY)
-        yield m
+@pytest.fixture
+def bags_dir(bag):
+    return os.path.dirname(bag)
+
+
+@pytest.fixture
+def prj_4326():
+    return _data_file('fixtures/4326.prj')
+
+
+@pytest.fixture
+def prj_2249():
+    return _data_file('fixtures/2249.prj')
+
+
+@pytest.fixture
+def fgdc():
+    return _data_file('fixtures/bermuda/data/bermuda.xml')
 
 
 def _data_file(name):
