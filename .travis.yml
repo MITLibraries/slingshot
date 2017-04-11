@@ -5,8 +5,6 @@ language: python
 matrix:
   include:
     - env: TOX_ENV=py27
-    - python: 3.5
-      env: TOX_ENV=py35
     - env: TOX_ENV=coveralls
 install:
   - pip install tox
