@@ -35,10 +35,7 @@ def unpack_zip(source, destination):
                 fp.write(zf.read(f))
 
 
-def make_bag_dir(source, dest_dir, overwrite=False):
-    layer = os.path.basename(source)
-    layer_name = os.path.splitext(layer)[0]
-    destination = os.path.join(dest_dir, layer_name)
+def make_bag_dir(destination, overwrite=False):
     try:
         os.mkdir(destination)
     except OSError:

@@ -26,23 +26,43 @@ def main():
 
 
 @main.command()
-@click.argument('layers', type=click.Path(exists=True, file_okay=False,
-                                          resolve_path=True))
-@click.argument('store', type=click.Path(exists=True, file_okay=False,
-                                         resolve_path=True))
-@click.option('--db-uri', envvar='PG_DATABASE')
-@click.option('--workspace', default='mit')
-@click.option('--public', envvar='PUBLIC_GEOSERVER')
-@click.option('--secure', envvar='SECURE_GEOSERVER')
-def bag(layers, store, db_uri, workspace, public, secure):
+@click.argument('layers', type=click.Path(exists=True, resolve_path=True))
+@click.argument('bags', type=click.Path(exists=True, file_okay=False,
+                                        resolve_path=True))
+@click.option('--db-uri', envvar='PG_DATABASE',
+              help='SQLAlchemy database URI. Only PostGIS is currently '
+                   'supported.')
+@click.option('--workspace', default='mit',
+              help='GeoServer workspace for layer.')
+@click.option('--public', envvar='PUBLIC_GEOSERVER',
+              help='URL for public GeoServer instance.')
+@click.option('--secure', envvar='SECURE_GEOSERVER',
+              help='URL for secure GeoServer instance.')
+def bag(layers, bags, db_uri, workspace, public, secure):
+    """Load layers into PostGIS.
+
+    This will load zipped shapefiles into PostGIS and create Bags
+    containing the unzipped shapefiles along with a GeoBlacklight JSON
+    record. LAYERS should be the path to a zipped shapefile or a
+    directory of zipped shapefiles. BAGS is the directory where the
+    Bags will be written to. Each Bag directory will be named the same
+    as the name of the shapefile.
+
+    A Bag will only be created if the layer was successfully loaded into
+    PostGIS. If a Bag already exists the layer will be skipped.
+    """
     engine.configure(db_uri)
     metadata.bind = engine()
-    for layer in [l for l in os.listdir(layers) if l.endswith('.zip')]:
-        source = os.path.join(layers, layer)
-        name = os.path.splitext(layer)[0]
-        dest = make_bag_dir(source, store)
+    if os.path.isdir(layers):
+        zips = [os.path.join(layers, l) for l in os.listdir(layers)
+                if l.endswith('.zip')]
+    else:
+        zips = [layers]
+    for layer in zips:
+        name = os.path.splitext(os.path.basename(layer))[0]
+        dest = make_bag_dir(os.path.join(bags, name))
         try:
-            unpack_zip(source, dest)
+            unpack_zip(layer, dest)
             bag = GeoBag.create(dest)
             record = create_record(bag,
                                    public=public,
