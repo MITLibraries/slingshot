@@ -1,22 +1,11 @@
 import arrow
-from ogre.xml import FGDCParser
+from slingshot.parsers import FGDCParser
 
 from slingshot.record import (
-    create_record,
     geometry_mapper,
     MitRecord,
     rights_mapper,
 )
-
-
-def test_create_record_returns_metadata_record(fgdc):
-    r = create_record(fgdc, FGDCParser)
-    assert r.dc_title_s == 'Bermuda (Geographic Feature Names, 2003)'
-
-
-def test_create_record_adds_kwargs(fgdc):
-    r = create_record(fgdc, FGDCParser, dc_format_s='Shapefile')
-    assert r.dc_format_s == 'Shapefile'
 
 
 def test_mit_record_maps_rights():

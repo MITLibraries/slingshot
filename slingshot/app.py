@@ -10,13 +10,13 @@ from zipfile import ZipFile
 
 import bagit
 from geomet import wkt
-from ogre.xml import FGDCParser
 import requests
 from shapefile import Reader
 
 from slingshot.db import engine, multiply, prep_field, table
+from slingshot.parsers import FGDCParser, parse
 from slingshot.proj import parser
-from slingshot.record import create_record as _create_record
+from slingshot.record import MitRecord
 
 
 GEOM_TYPES = {
@@ -48,7 +48,10 @@ def make_bag_dir(destination, overwrite=False):
 
 
 def create_record(bag, public, secure, **kwargs):
-    record = _create_record(bag.fgdc, FGDCParser, **kwargs)
+    r = parse(bag.fgdc, FGDCParser)
+    r.update(**kwargs)
+    record = MitRecord(solr_geom=(r['_bbox_w'], r['_bbox_e'], r['_bbox_n'],
+                                  r['_bbox_s']), **r)
     gs = public if record.dc_rights_s == 'Public' else secure
     gs = gs.rstrip('/')
     refs = {
