@@ -125,8 +125,11 @@ class GeoBag(object):
     @record.setter
     def record(self, value):
         path = os.path.join(self.payload_dir, 'gbl_record.json')
+        s = json.dumps(value)
+        if not isinstance(s, bytes):
+            s = s.encode('utf-8')
         with open(path, 'wb') as fp:
-            json.dump(value, fp)
+            fp.write(s)
         self._record = value
 
     @property

@@ -74,9 +74,9 @@ def prep_field(field, _type, encoding):
         return r'\N'
     if _type == 'C':
         field = force_utf8(field, encoding)
-        quotable = ('\t', '\n', '\r', '\.')
+        quotable = (b'\t', b'\n', b'\r', b'\.')
         for q in quotable:
-            field = field.replace(q, r'\{}'.format(q))
+            field = field.replace(q, b'\\' + q)
         return field
     return str(field)
 
