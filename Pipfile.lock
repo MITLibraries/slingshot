@@ -1,7 +1,7 @@
 {
     "_meta": {
         "hash": {
-            "sha256": "97ed3b78c34fb92ea254a5d7f930e8f0129b963883d3738c28ddc938ded85695"
+            "sha256": "01641ef0ebc01bd35cfc58b73d01deee4923260a81adc5541beecb7d31214eec"
         },
         "requires": {},
         "sources": [
@@ -24,6 +24,10 @@
             "hash": "sha256:b65cdc73cd348448ef0164f6c77d45a9f27ca575d3c5d71ccc33adf684bc6ef0",
             "version": "==1.1.9"
         },
+        "arrow": {
+            "hash": "sha256:805906f09445afc1f0fc80187db8fe07670e3b25cdafa09b8d8ac264a8c0c722",
+            "version": "==0.10.0"
+        },
         "bagit": {
             "hash": "sha256:73bd9dc6d364adebcb0e5ecdd047a78fe8b1d0ffa3cf4ce4d22547a5be04c383",
             "version": "==1.5.4"
@@ -36,10 +40,6 @@
             "hash": "sha256:cef6c73cfc0c4ea3961e16a6979dce75ef0298f0023cbd482855134dcdf7c010",
             "version": "==0.1.2"
         },
-        "ogre-toolkit": {
-            "git": "https://github.com/MITLibraries/ogre-toolkit.git",
-            "ref": "master"
-        },
         "ply": {
             "hash": "sha256:96e94af7dd7031d8d6dd6e2a8e0de593b511c211a86e28a9c9621c275ac8bacb",
             "version": "==3.10"
@@ -51,6 +51,10 @@
         "pyshp": {
             "hash": "sha256:009e02b281d7f509c34d31aca3545334e45bea15136f3bb81a37b4d13e21f9bd",
             "version": "==1.2.10"
+        },
+        "python-dateutil": {
+            "hash": "sha256:537bf2a8f8ce6f6862ad705cd68f9e405c0b5db014aa40fa29eab4335d4b1716",
+            "version": "==2.6.0"
         },
         "requests": {
             "hash": "sha256:1a720e8862a41aa22e339373b526f508ef0c8988baf48b84d3fc891a8e237efb",
