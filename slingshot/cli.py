@@ -1,5 +1,6 @@
 # -*- coding: utf-8 -*-
 from __future__ import absolute_import
+
 import os
 import shutil
 import traceback
@@ -10,7 +11,6 @@ from slingshot.app import (
     create_record,
     GeoBag,
     index_layer,
-    make_bag_dir,
     make_slug,
     register_layer,
     unpack_zip,
@@ -60,7 +60,12 @@ def bag(layers, bags, db_uri, workspace, public, secure):
         zips = [layers]
     for layer in zips:
         name = os.path.splitext(os.path.basename(layer))[0]
-        dest = make_bag_dir(os.path.join(bags, name))
+        dest = os.path.join(bags, name)
+        try:
+            os.mkdir(dest)
+        except OSError:
+            click.echo('Skipping existing layer {}'.format(name))
+            continue
         try:
             unpack_zip(layer, dest)
             bag = GeoBag.create(dest)

@@ -1,9 +1,9 @@
 # -*- coding: utf-8 -*-
 from __future__ import absolute_import
+
 import base64
 import json
 import os
-import shutil
 import tempfile
 import uuid
 from zipfile import ZipFile
@@ -33,18 +33,6 @@ def unpack_zip(source, destination):
             f_dest = os.path.join(destination, os.path.basename(f))
             with open(f_dest, 'wb') as fp:
                 fp.write(zf.read(f))
-
-
-def make_bag_dir(destination, overwrite=False):
-    try:
-        os.mkdir(destination)
-    except OSError:
-        if overwrite:
-            shutil.rmtree(destination)
-            os.mkdir(destination)
-        else:
-            raise
-    return destination
 
 
 def create_record(bag, public, secure, **kwargs):
