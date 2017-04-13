@@ -12,7 +12,6 @@ from slingshot.app import (
     GeoBag,
     get_srid,
     index_layer,
-    make_bag_dir,
     make_slug,
     make_uuid,
     register_layer,
@@ -28,33 +27,6 @@ def temp_dir():
 def test_unpack_zip_extracts_to_top_of_dir(shapefile, temp_dir):
     unpack_zip(shapefile, temp_dir)
     assert os.path.isfile(os.path.join(temp_dir, 'bermuda.shp'))
-
-
-def test_make_bag_dir_creates_directory(temp_dir):
-    target = os.path.join(temp_dir, 'TEST_BAG')
-    make_bag_dir(target)
-    assert os.path.isdir(target)
-
-
-def test_make_bag_dir_returns_dir_name(temp_dir):
-    target = os.path.join(temp_dir, 'TEST_BAG')
-    assert make_bag_dir(target) == target
-
-
-def test_make_bag_dir_raises_error_when_dir_exists(temp_dir):
-    bag = os.path.join(temp_dir, 'TEST_BAG')
-    os.mkdir(bag)
-    with pytest.raises(OSError):
-        make_bag_dir(bag)
-
-
-def test_make_bag_dir_overwrites_existing_dir(temp_dir):
-    bag = os.path.join(temp_dir, 'TEST_BAG')
-    os.mkdir(bag)
-    with open(os.path.join(bag, 'foobar'), 'w') as fp:
-        fp.write("I shouldn't be here.")
-    make_bag_dir(bag, overwrite=True)
-    assert not os.path.isfile(os.path.join(bag, 'foobar'))
 
 
 def test_create_record_creates_mit_record(bag):

@@ -1,3 +1,4 @@
+import os
 import shutil
 import tempfile
 try:
@@ -27,6 +28,27 @@ def test_bag_creates_bag(runner, shapefile):
                                    'mock://example.com', layers, store])
     assert res.exit_code == 0
     assert 'Loaded layer bermuda' in res.output
+
+
+def test_bag_skips_existing_layers(runner, shapefile, bags_dir):
+    with patch('slingshot.cli.load_layer'):
+        res = runner.invoke(main, ['bag', '--db-uri', 'sqlite://', '--public',
+                                   'mock://example.com', '--secure',
+                                   'mock://example.com', shapefile, bags_dir])
+    assert res.exit_code == 0
+    assert 'Skipping existing layer bermuda' in res.output
+
+
+def test_bag_removes_failed_bag(runner, shapefile):
+    store = tempfile.mkdtemp()
+    with patch('slingshot.cli.load_layer') as m:
+        m.side_effect = Exception
+        res = runner.invoke(main, ['bag', '--db-uri', 'sqlite://', '--public',
+                                   'mock://example.com', '--secure',
+                                   'mock://example.com', shapefile, store])
+        assert res.exit_code == 0
+        assert 'Failed creating bag bermuda' in res.output
+        assert not os.listdir(store)
 
 
 def test_publish_publishes_layer(runner, bags_dir):
