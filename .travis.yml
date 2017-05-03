@@ -8,7 +8,8 @@ matrix:
       env: TOX_ENV=py35
     - python: 3.5
       env: TOX_ENV=setup
-    - env: TOX_ENV=coveralls
+    - python: 3.5
+      env: TOX_ENV=coveralls
 install:
   - pip install tox
 script:
