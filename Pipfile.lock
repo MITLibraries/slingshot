@@ -1,7 +1,7 @@
 {
     "_meta": {
         "hash": {
-            "sha256": "01641ef0ebc01bd35cfc58b73d01deee4923260a81adc5541beecb7d31214eec"
+            "sha256": "576d347419038d49efcca65aafdb235fd65400bf4e38312862710cf6514cfea9"
         },
         "requires": {},
         "sources": [
@@ -13,117 +13,92 @@
     },
     "default": {
         "GeoAlchemy2": {
-            "hash": "sha256:9302c7332ed7fecc25bff8944066227c5849146c998c2b21a21d4f55a2177d13",
             "version": "==0.4.0"
         },
         "PlyPlus": {
-            "hash": "sha256:d75ea80cd0ac6ce8e8fe433310326efd15c5f8aa18fcb45113ebca51dda36e3c",
             "version": "==0.7.5"
         },
         "SQLAlchemy": {
-            "hash": "sha256:b65cdc73cd348448ef0164f6c77d45a9f27ca575d3c5d71ccc33adf684bc6ef0",
             "version": "==1.1.9"
         },
         "arrow": {
-            "hash": "sha256:805906f09445afc1f0fc80187db8fe07670e3b25cdafa09b8d8ac264a8c0c722",
             "version": "==0.10.0"
         },
         "bagit": {
-            "hash": "sha256:73bd9dc6d364adebcb0e5ecdd047a78fe8b1d0ffa3cf4ce4d22547a5be04c383",
             "version": "==1.5.4"
         },
         "click": {
-            "hash": "sha256:29f99fc6125fbc931b758dc053b3114e55c77a6e4c6c3a2674a2dc986016381d",
             "version": "==6.7"
         },
         "geomet": {
-            "hash": "sha256:cef6c73cfc0c4ea3961e16a6979dce75ef0298f0023cbd482855134dcdf7c010",
             "version": "==0.1.2"
         },
         "ply": {
-            "hash": "sha256:96e94af7dd7031d8d6dd6e2a8e0de593b511c211a86e28a9c9621c275ac8bacb",
             "version": "==3.10"
         },
         "psycopg2": {
-            "hash": "sha256:9c9fe11f87c44e83620b2273f40338e3c25fdbfd34986dddc77e840e0acd25bc",
             "version": "==2.7.1"
         },
         "pyshp": {
-            "hash": "sha256:009e02b281d7f509c34d31aca3545334e45bea15136f3bb81a37b4d13e21f9bd",
-            "version": "==1.2.10"
+            "version": "==1.2.11"
         },
         "python-dateutil": {
-            "hash": "sha256:537bf2a8f8ce6f6862ad705cd68f9e405c0b5db014aa40fa29eab4335d4b1716",
             "version": "==2.6.0"
         },
         "requests": {
-            "hash": "sha256:1a720e8862a41aa22e339373b526f508ef0c8988baf48b84d3fc891a8e237efb",
             "version": "==2.13.0"
         },
         "six": {
-            "hash": "sha256:0ff78c403d9bccf5a425a6d31a12aa6b47f1c21ca4dc2573a7e2f32a97335eb1",
             "version": "==1.10.0"
         }
     },
     "develop": {
         "appdirs": {
-            "hash": "sha256:d8b24664561d0d34ddfaec54636d502d7cea6e29c3eaf68f3df6180863e2166e",
             "version": "==1.4.3"
         },
+        "bumpversion": {
+            "version": "==0.5.3"
+        },
         "coverage": {
-            "hash": "sha256:b25aa3531220faaf1727fc29bc000798476b4a30f429dc07898d5da48caefa15",
             "version": "==4.3.4"
         },
         "coveralls": {
-            "hash": "sha256:ff403f4ddf6937327ef267735ac987a0f8fdd083d0f26f0002549ef68451e886",
             "version": "==1.1"
         },
         "docopt": {
-            "hash": "sha256:49b3a825280bd66b3aa83585ef59c4a8c82f2c8a522dbe754a8bc8d08c85c491",
             "version": "==0.6.2"
         },
         "mock": {
-            "hash": "sha256:5ce3c71c5545b472da17b72268978914d0252980348636840bd34a00b5cc96c1",
             "version": "==2.0.0"
         },
         "packaging": {
-            "hash": "sha256:99276dc6e3a7851f32027a68f1095cd3f77c148091b092ea867a351811cfe388",
             "version": "==16.8"
         },
         "pbr": {
-            "hash": "sha256:be54aa7c958bf0a6b2949d3fb5b049c1e4d212d25a03068583b4942eccec804f",
-            "version": "==2.1.0"
+            "version": "==3.0.0"
         },
         "py": {
-            "hash": "sha256:81b5e37db3cc1052de438375605fb5d3b3e97f950f415f9143f04697c684d7eb",
             "version": "==1.4.33"
         },
         "pyparsing": {
-            "hash": "sha256:fee43f17a9c4087e7ed1605bd6df994c6173c1e977d7ade7b651292fab2bd010",
             "version": "==2.2.0"
         },
         "pytest": {
-            "hash": "sha256:66f332ae62593b874a648b10a8cb106bfdacd2c6288ed7dec3713c3a808a6017",
             "version": "==3.0.7"
         },
         "pytest-cov": {
-            "hash": "sha256:10e37e876f49ddec80d6c83a54b657157f1387ebc0f7755285f8c156130014a1",
             "version": "==2.4.0"
         },
         "requests": {
-            "hash": "sha256:1a720e8862a41aa22e339373b526f508ef0c8988baf48b84d3fc891a8e237efb",
             "version": "==2.13.0"
         },
         "requests-mock": {
-            "hash": "sha256:23edd6f7926aa13b88bf79cb467632ba2dd5a253034e9f41563f60ed305620c7",
             "version": "==1.3.0"
         },
         "setuptools": {
-            "hash": "sha256:1f7aac8b778446406ec5dcd5cc9305b375e7935e38f2fd3b1b70168c21a079d0",
-            "version": "==34.4.1"
+            "version": "==35.0.2"
         },
         "six": {
-            "hash": "sha256:0ff78c403d9bccf5a425a6d31a12aa6b47f1c21ca4dc2573a7e2f32a97335eb1",
             "version": "==1.10.0"
         }
     }

@@ -3,6 +3,7 @@ verify_ssl = true
 url = "https://pypi.python.org/simple"
 
 [dev-packages]
+bumpversion = "*"
 coveralls = "*"
 pytest = "*"
 pytest-cov = "*"
