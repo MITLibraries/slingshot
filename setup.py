@@ -29,13 +29,22 @@ setup(
     author_email='mgraves@mit.edu',
     packages=find_packages(exclude=['tests']),
     install_requires=[
+        'arrow',
         'bagit',
         'click',
         'geoalchemy2',
         'geomet',
         'plyplus',
+        'psycopg2',
         'pyshp',
         'requests',
+    ],
+    setup_requires=[
+        'pytest-runner',
+    ],
+    tests_require=[
+        'pytest',
+        'requests-mock',
     ],
     entry_points={
         'console_scripts': [
@@ -50,7 +59,7 @@ setup(
         'Programming Language :: Python :: 2',
         'Programming Language :: Python :: 2.7',
         'Programming Language :: Python :: 3',
-        'Programming Language :: Python :: 3.3',
         'Programming Language :: Python :: 3.4',
+        'Programming Language :: Python :: 3.5',
     ]
 )
