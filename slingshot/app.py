@@ -29,6 +29,8 @@ GEOM_TYPES = {
 
 def unpack_zip(source, destination):
     with ZipFile(source) as zf:
+        if not any([m.lower().endswith('.shp') for m in zf.namelist()]):
+            raise "Only shapefiles are currently supported"
         for f in [m for m in zf.namelist() if not m.endswith('/')]:
             f_dest = os.path.join(destination, os.path.basename(f))
             with open(f_dest, 'wb') as fp:

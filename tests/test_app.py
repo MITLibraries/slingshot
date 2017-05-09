@@ -29,6 +29,11 @@ def test_unpack_zip_extracts_to_top_of_dir(shapefile, temp_dir):
     assert os.path.isfile(os.path.join(temp_dir, 'bermuda.shp'))
 
 
+def test_unpack_raises_error_for_no_shapefile(no_shp, temp_dir):
+    with pytest.raises(Exception):
+        unpack_zip(no_shp, temp_dir)
+
+
 def test_create_record_creates_mit_record(bag):
     record = create_record(GeoBag(bag), public='mock://example.com',
                            secure='mock://example.com')

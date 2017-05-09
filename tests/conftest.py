@@ -36,6 +36,11 @@ def no_xml():
 
 
 @pytest.fixture
+def no_shp():
+    return _data_file('fixtures/no_shp.zip')
+
+
+@pytest.fixture
 def bag():
     d = os.path.join(tempfile.mkdtemp(), 'bermuda')
     b = _data_file('fixtures/bermuda')
