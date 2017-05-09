@@ -52,18 +52,6 @@ def _make_column(field):
         return Column(f_name, Boolean)
 
 
-def force_utf8(value, encoding):
-    """Force a value into UTF-8.
-
-    The value could be either a bytes object, in which case ``encoding``
-    is used to decode before re-encoding in UTF-8. Otherwise, it is
-    assumed to be a unicode object and is encoded as UTF-8.
-    """
-    if isinstance(value, bytes):
-        value = value.decode(encoding)
-    return value.encode('utf-8')
-
-
 def prep_field(field, _type, encoding):
     """Prepare a field to be written out for PostGres COPY.
 
@@ -73,10 +61,14 @@ def prep_field(field, _type, encoding):
     if field is None:
         return r'\N'
     if _type == 'C':
-        field = force_utf8(field, encoding)
-        quotable = (b'\t', b'\n', b'\r', b'\.')
+        try:
+            # This could be either bytes or unicode
+            field = field.decode(encoding)
+        except:
+            pass
+        quotable = (u'\t', u'\n', u'\r', u'\.')
         for q in quotable:
-            field = field.replace(q, b'\\' + q)
+            field = field.replace(q, u'\\' + q)
         return field
     return str(field)
 
