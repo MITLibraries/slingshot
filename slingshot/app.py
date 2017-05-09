@@ -200,7 +200,8 @@ def load_layer(bag):
                         wkt.dumps(multiply(record.shape.__geo_interface__)))
                 rec = [prep_field(f, types[i], encoding) for i, f in
                        enumerate(record.record)] + [geom]
-                fp.write('\t'.join(rec) + '\n')
+                f_bytes = (u'\t'.join(rec) + u'\n').encode('utf-8')
+                fp.write(f_bytes)
             with engine().begin() as conn:
                 fp.flush()
                 fp.seek(0)

@@ -2,7 +2,6 @@ import pytest
 from sqlalchemy import Boolean, Date, Float, Integer, Text
 
 from slingshot.db import (
-    force_utf8,
     metadata,
     multiply,
     prep_field,
@@ -56,25 +55,18 @@ def test_make_column_creates_boolean_field():
     assert isinstance(c.type, Boolean)
 
 
-def test_force_utf8_reencodes_bytes_to_utf8():
-    b = u'\u0192'.encode('cp1252')
-    assert force_utf8(b, encoding='cp1252') == b'\xc6\x92'
-
-
-def test_force_utf8_encodes_unicode_to_utf8():
-    assert force_utf8(u'\u0192', None) == b'\xc6\x92'
-
-
 def test_prep_field_returns_null_character_for_none():
-    assert prep_field(None, 'C', None) == r'\N'
+    assert prep_field(None, 'C', None) == u'\u005cN'
 
 
-def test_prep_field_returns_utf8_for_character_data():
-    assert prep_field(u'\u0192', 'C', 'ISO-8859-1') == b'\xc6\x92'
+def test_prep_field_returns_unicode_for_character_data():
+    assert prep_field(b'\x83', 'C', 'cp1252') == u'\u0192'
+    assert prep_field(u'\u0192', 'C', 'iso-8859-1') == u'\u0192'
 
 
 def test_prep_field_escapes_characters():
-    assert prep_field(u'foo\tbar', 'C', None) == b'foo\x5c\x09bar'
+    assert prep_field(b'foo\x09bar', 'C', 'iso-8859-1') == \
+        u'foo\u005c\u0009bar'
 
 
 def test_prep_field_casts_numbers_to_strings():
