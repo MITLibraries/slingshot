@@ -33,8 +33,12 @@ def unpack_zip(source, destination):
             raise "Only shapefiles are currently supported"
         for f in [m for m in zf.namelist() if not m.endswith('/')]:
             f_dest = os.path.join(destination, os.path.basename(f))
-            with open(f_dest, 'wb') as fp:
-                fp.write(zf.read(f))
+            with open(f_dest, 'wb') as fp, zf.open(f) as zp:
+                while True:
+                    chunk = zp.read(8192)
+                    if not chunk:
+                        break
+                    fp.write(chunk)
 
 
 def create_record(bag, public, secure, **kwargs):
