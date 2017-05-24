@@ -11,10 +11,10 @@ from slingshot.app import (
     create_record,
     GeoBag,
     get_srid,
-    index_layer,
     make_slug,
     make_uuid,
     register_layer,
+    Solr,
     unpack_zip,
 )
 
@@ -57,11 +57,29 @@ def test_register_layer_adds_layer_to_geoserver():
             '<featureType><name>bermuda</name></featureType>'
 
 
-def test_index_layer_adds_layer_to_solr():
+def test_solr_adds_layer_to_solr():
     with requests_mock.Mocker() as m:
         m.post('mock://example.com/update/json/docs')
-        index_layer({'foo': 'bar'}, 'mock://example.com/')
+        s = Solr('mock://example.com/')
+        s.add({'foo': 'bar'})
         assert m.request_history[0].json() == {'foo': 'bar'}
+
+
+def test_solr_deletes_by_query():
+    with requests_mock.Mocker() as m:
+        m.post('mock://example.com/update')
+        s = Solr('mock://example.com/')
+        s.delete()
+        assert m.request_history[0].json() == \
+            {'delete': {'query': 'dct_provenance_s:MIT'}}
+
+
+def test_solr_commits_changes():
+    with requests_mock.Mocker() as m:
+        m.post('mock://example.com/update')
+        s = Solr('mock://example.com/')
+        s.commit()
+        assert m.request_history[0].json() == {'commit': {}}
 
 
 def test_make_uuid_creates_uuid_string():

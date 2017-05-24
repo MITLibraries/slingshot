@@ -62,3 +62,17 @@ def test_publish_publishes_layer(runner, bags_dir):
                                    'mock://example.com/solr', bags_dir])
         assert res.exit_code == 0
         assert 'Loaded bermuda' in res.output
+
+
+def test_reindex_deletes_and_reloads(runner, bags_dir):
+    with requests_mock.Mocker() as m:
+        m.post('mock://example.com/solr/update')
+        m.post('mock://example.com/solr/update/json/docs')
+        res = runner.invoke(main, ['reindex', '--solr',
+                                   'mock://example.com/solr', bags_dir])
+        assert res.exit_code == 0
+        assert m.request_history[0].json() == \
+            {'delete': {'query':
+                        'dct_provenance_s:MIT AND dc_format_s:Shapefile'}}
+        assert 'Indexed bermuda' in res.output
+        assert m.request_history[2].json() == {'commit': {}}
