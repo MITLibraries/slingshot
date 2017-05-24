@@ -65,12 +65,6 @@ def register_layer(layer_name, geoserver, workspace, datastore, auth=None):
     r.raise_for_status()
 
 
-def index_layer(record, solr, auth=None):
-    url = '{}/update/json/docs'.format(solr.rstrip('/'))
-    r = requests.post(url, json=record, auth=auth)
-    r.raise_for_status()
-
-
 def make_uuid(value, namespace='mit.edu'):
     try:
         ns = uuid.uuid5(uuid.NAMESPACE_DNS, namespace)
@@ -88,6 +82,28 @@ def make_slug(name):
     uid = make_uuid(name)
     b32 = base64.b32encode(uid.bytes[:8])
     return 'mit-' + b32.decode('ascii').rstrip('=').lower()
+
+
+class Solr(object):
+    def __init__(self, url, auth=None):
+        self.url = url.rstrip('/')
+        self.session = requests.Session()
+        self.session.auth = auth
+
+    def add(self, record):
+        url = self.url + '/update/json/docs'
+        r = self.session.post(url, json=record)
+        r.raise_for_status()
+
+    def delete(self, query='dct_provenance_s:MIT'):
+        url = self.url + '/update'
+        r = self.session.post(url, json={'delete': {'query': query}})
+        r.raise_for_status()
+
+    def commit(self):
+        url = self.url + '/update'
+        r = self.session.post(url, json={'commit': {}})
+        r.raise_for_status()
 
 
 class GeoBag(object):
