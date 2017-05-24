@@ -1,5 +1,4 @@
 import arrow
-from slingshot.parsers import FGDCParser
 
 from slingshot.record import (
     geometry_mapper,
@@ -27,8 +26,8 @@ def test_mit_record_defaults_to_now_for_modified_time():
     now = arrow.utcnow()
     r = MitRecord()
     assert r.layer_modified_dt is not None
-    assert now.replace(minutes=-1) < arrow.get(r.layer_modified_dt) < \
-        now.replace(minutes=+1)
+    assert now.shift(minutes=-1) < arrow.get(r.layer_modified_dt) < \
+        now.shift(minutes=+1)
 
 
 def test_mit_record_formats_datetime():
