@@ -1,9 +1,0 @@
-bagit
-click
-geoalchemy2
-geomet
--e git+https://github.com/MITLibraries/ogre-toolkit.git@master#egg=ogre-toolkit
-plyplus
-psycopg2
-pyshp
-requests
