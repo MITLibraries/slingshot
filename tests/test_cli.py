@@ -55,6 +55,7 @@ def test_publish_publishes_layer(runner, bags_dir):
     with requests_mock.Mocker() as m:
         m.post('mock://example.com/public/rest/workspaces/mit/datastores'
                '/data/featuretypes')
+        m.post('mock://example.com/solr/update')
         m.post('mock://example.com/solr/update/json/docs')
         res = runner.invoke(main, ['publish', '--public',
                                    'mock://example.com/public', '--secure',
