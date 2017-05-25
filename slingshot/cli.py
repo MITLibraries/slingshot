@@ -88,17 +88,30 @@ def bag(layers, bags, db_uri, workspace, public, secure):
 
 @main.command()
 @click.argument('bags')
-@click.option('--workspace', default='mit')
-@click.option('--datastore', default='data')
-@click.option('--public', envvar='PUBLIC_GEOSERVER')
-@click.option('--secure', envvar='SECURE_GEOSERVER')
-@click.option('--geoserver-user', envvar='GEOSERVER_USER')
-@click.option('--geoserver-password', envvar='GEOSERVER_PASSWORD')
-@click.option('--solr', envvar='SOLR')
-@click.option('--solr-user', envvar='SOLR_USER')
-@click.option('--solr-password', envvar='SOLR_PASSWORD')
+@click.option('--workspace', default='mit',
+              help='GeoServer workspace for layer.')
+@click.option('--datastore', default='data',
+              help='GeoServer datastore for layer.')
+@click.option('--public', envvar='PUBLIC_GEOSERVER',
+              help='URL for public GeoServer instance.')
+@click.option('--secure', envvar='SECURE_GEOSERVER',
+              help='URL for secure GeoServer instance.')
+@click.option('--geoserver-user', envvar='GEOSERVER_USER',
+              help='Username for GeoServer.')
+@click.option('--geoserver-password', envvar='GEOSERVER_PASSWORD',
+              help='Password for GeoServer.')
+@click.option('--solr', envvar='SOLR', help='URL for Solr instance.')
+@click.option('--solr-user', envvar='SOLR_USER',
+              help='Username for Solr.')
+@click.option('--solr-password', envvar='SOLR_PASSWORD',
+              help='Password for Solr.')
 def publish(bags, workspace, datastore, public, secure, geoserver_user,
             geoserver_password, solr, solr_user, solr_password):
+    """Add layers to GeoServer and Solr.
+
+    This will traverse the BAGS directory and register each layer in
+    the appropriate GeoServer instance, and add it to Solr.
+    """
     gs_auth = (geoserver_user, geoserver_password) if geoserver_user and \
         geoserver_password else None
     solr_auth = (solr_user, solr_password) if solr_user and solr_password \
@@ -114,14 +127,22 @@ def publish(bags, workspace, datastore, public, secure, geoserver_user,
             click.echo('Loaded {}'.format(bag.name))
         except Exception as e:
             click.echo('Failed loading {}: {}'.format(b, e))
+    s.commit()
 
 
 @main.command()
 @click.argument('bags')
-@click.option('--solr', envvar='SOLR')
-@click.option('--solr-user', envvar='SOLR_USER')
-@click.option('--solr-password', envvar='SOLR_PASSWORD')
+@click.option('--solr', envvar='SOLR', help='URL for Solr isntance.')
+@click.option('--solr-user', envvar='SOLR_USER',
+              help='Username for Solr.')
+@click.option('--solr-password', envvar='SOLR_PASSWORD',
+              help='Password for Solr.')
 def reindex(bags, solr, solr_user, solr_password):
+    """Reindex layers in Solr.
+
+    This will delete all existing shapefile layers in Solr and then
+    reindex every layer in the BAGS directory.
+    """
     solr_auth = (solr_user, solr_password) if solr_user and solr_password \
         else None
     s = Solr(solr, solr_auth)
