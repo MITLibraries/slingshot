@@ -4,16 +4,14 @@ from __future__ import absolute_import
 import base64
 import json
 import os
-import tempfile
 import uuid
 from zipfile import ZipFile
 
 import bagit
-from geomet import wkt
 import requests
 from shapefile import Reader
 
-from slingshot.db import engine, multiply, prep_field, table
+from slingshot.db import engine, table, PGShapeReader
 from slingshot.parsers import FGDCParser, parse
 from slingshot.proj import parser
 from slingshot.record import MitRecord
@@ -203,33 +201,22 @@ def load_layer(bag):
         with open(bag.cst) as fp:
             encoding = fp.read().strip()
     except:
-        encoding = 'ISO-8859-1'
+        encoding = 'UTF-8'
     sf = Reader(bag.shp)
     geom_type = GEOM_TYPES[sf.shapeType]
     fields = sf.fields[1:]
-    types = [f[1] for f in fields]
     t = table(bag.name, geom_type, srid, fields)
     if t.exists():
         raise Exception('Table {} already exists'.format(bag.name))
     t.create()
-    with tempfile.TemporaryFile() as fp:
-        try:
-            for record in sf.iterShapeRecords():
-                geom = 'SRID={};{}'.format(
-                        srid,
-                        wkt.dumps(multiply(record.shape.__geo_interface__)))
-                rec = [prep_field(f, types[i], encoding) for i, f in
-                       enumerate(record.record)] + [geom]
-                f_bytes = (u'\t'.join(rec) + u'\n').encode('utf-8')
-                fp.write(f_bytes)
-            with engine().begin() as conn:
-                fp.flush()
-                fp.seek(0)
-                cursor = conn.connection.cursor()
-                cursor.copy_from(fp, '"{}"'.format(bag.name))
-            with engine().connect() as conn:
-                conn.execute('CREATE INDEX "idx_{}_geom" ON "{}" USING GIST '
-                             '(geom)'.format(bag.name, bag.name))
-        except:
-            t.drop()
-            raise
+    try:
+        with engine().begin() as conn:
+            reader = PGShapeReader(sf, srid, encoding)
+            cursor = conn.connection.cursor()
+            cursor.copy_from(reader, '"{}"'.format(bag.name))
+        with engine().connect() as conn:
+            conn.execute('CREATE INDEX "idx_{}_geom" ON "{}" USING GIST '
+                         '(geom)'.format(bag.name, bag.name))
+    except:
+        t.drop()
+        raise
