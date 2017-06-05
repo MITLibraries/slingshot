@@ -7,7 +7,7 @@ This application provides workflow for spatial data. It can be used to create ba
 To install the latest release, create a virtualenv and use pip:
 
 ```bash
-(slingshot)$ pip install https://github.com/MITLibraries/slingshot/zipball/v0.3.0
+(slingshot)$ pip install https://github.com/MITLibraries/slingshot/zipball/v0.3.1
 ```
 
 This will make a `slingshot` command available from your virtualenv.
