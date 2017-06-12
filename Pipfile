@@ -7,11 +7,13 @@ arrow = "*"
 bagit = "*"
 click = "*"
 geomet = "*"
+numpy = "*"
 psycopg2 = "*"
 pyshp = "*"
 requests = "*"
 GeoAlchemy2 = "*"
 PlyPlus = "*"
+rasterio = "*"
 
 [dev-packages]
 bumpversion = "*"

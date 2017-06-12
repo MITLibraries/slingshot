@@ -34,12 +34,15 @@ setup(
         'click',
         'geoalchemy2',
         'geomet',
+        'numpy',
         'plyplus',
         'psycopg2',
         'pyshp',
+        'rasterio',
         'requests',
     ],
     setup_requires=[
+        'numpy', # this is required (but not specified) by rasterio
         'pytest-runner',
     ],
     tests_require=[

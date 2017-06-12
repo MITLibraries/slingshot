@@ -5,7 +5,8 @@ services:
     - postgresql
 env:
   global:
-    POSTGIS_DB="postgresql://postgres@localhost/slingshot_test"
+    - POSTGIS_DB="postgresql://postgres@localhost/slingshot_test"
+    - GDAL_VERSION=2.2.0
 matrix:
   include:
     - env: TOX_ENV=py27-integration
@@ -15,9 +16,17 @@ matrix:
       env: TOX_ENV=flake8
     - python: 3.5
       env: TOX_ENV=coveralls
+cache:
+  directories:
+    - $HOME/gdal
+before_install:
+  - bash install-gdal.sh
+  - export LD_LIBRARY_PATH=$HOME/gdal/lib:$LD_LIBRARY_PATH
+  - export PATH=$HOME/gdal/bin:$PATH
 before_script:
-    - psql -U postgres -c "CREATE DATABASE slingshot_test;"
-    - psql -U postgres -d slingshot_test -c "CREATE EXTENSION postgis;"
+  - echo "Using gdal version $(gdal-config --version)"
+  - psql -U postgres -c "CREATE DATABASE slingshot_test;"
+  - psql -U postgres -d slingshot_test -c "CREATE EXTENSION postgis;"
 install:
   - pip install tox
 script:

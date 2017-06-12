@@ -68,6 +68,21 @@ def fgdc():
     return _data_file('fixtures/bermuda/data/bermuda.xml')
 
 
+@pytest.fixture
+def rgb():
+    return _data_file('fixtures/rgb.tif')
+
+
+@pytest.fixture
+def grayscale():
+    return _data_file('fixtures/grayscale.tif')
+
+
+@pytest.fixture
+def paletted():
+    return _data_file('fixtures/paletted.tif')
+
+
 def _data_file(name):
     cur_dir = os.path.dirname(os.path.realpath(__file__))
     return os.path.join(cur_dir, name)

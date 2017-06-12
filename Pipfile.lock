@@ -1,7 +1,7 @@
 {
     "_meta": {
         "hash": {
-            "sha256": "576d347419038d49efcca65aafdb235fd65400bf4e38312862710cf6514cfea9"
+            "sha256": "40c5ee9494fd36f46e64225b0932ce296d5a60b588f0a28275666b27c65dd3ce"
         },
         "requires": {},
         "sources": [
@@ -12,14 +12,8 @@
         ]
     },
     "default": {
-        "GeoAlchemy2": {
-            "version": "==0.4.0"
-        },
-        "PlyPlus": {
-            "version": "==0.7.5"
-        },
-        "SQLAlchemy": {
-            "version": "==1.1.10"
+        "affine": {
+            "version": "==2.0.0.post1"
         },
         "arrow": {
             "version": "==0.10.0"
@@ -27,17 +21,44 @@
         "bagit": {
             "version": "==1.5.4"
         },
+        "certifi": {
+            "version": "==2017.4.17"
+        },
+        "chardet": {
+            "version": "==3.0.4"
+        },
         "click": {
             "version": "==6.7"
+        },
+        "click-plugins": {
+            "version": "==1.0.3"
+        },
+        "cligj": {
+            "version": "==0.4.0"
+        },
+        "geoalchemy2": {
+            "version": "==0.4.0"
         },
         "geomet": {
             "version": "==0.1.2"
         },
+        "idna": {
+            "version": "==2.5"
+        },
+        "numpy": {
+            "version": "==1.13.0"
+        },
         "ply": {
             "version": "==3.10"
         },
+        "plyplus": {
+            "version": "==0.7.5"
+        },
         "psycopg2": {
             "version": "==2.7.1"
+        },
+        "pyparsing": {
+            "version": "==2.2.0"
         },
         "pyshp": {
             "version": "==1.2.11"
@@ -45,19 +66,34 @@
         "python-dateutil": {
             "version": "==2.6.0"
         },
+        "rasterio": {
+            "version": "==0.36.0"
+        },
         "requests": {
-            "version": "==2.14.2"
+            "version": "==2.17.3"
         },
         "six": {
             "version": "==1.10.0"
+        },
+        "snuggs": {
+            "version": "==1.4.1"
+        },
+        "sqlalchemy": {
+            "version": "==1.1.10"
+        },
+        "urllib3": {
+            "version": "==1.21.1"
         }
     },
     "develop": {
-        "appdirs": {
-            "version": "==1.4.3"
-        },
         "bumpversion": {
             "version": "==0.5.3"
+        },
+        "certifi": {
+            "version": "==2017.4.17"
+        },
+        "chardet": {
+            "version": "==3.0.4"
         },
         "coverage": {
             "version": "==4.4.1"
@@ -68,38 +104,38 @@
         "docopt": {
             "version": "==0.6.2"
         },
+        "idna": {
+            "version": "==2.5"
+        },
         "mock": {
             "version": "==2.0.0"
-        },
-        "packaging": {
-            "version": "==16.8"
         },
         "pbr": {
             "version": "==3.0.1"
         },
         "py": {
-            "version": "==1.4.33"
-        },
-        "pyparsing": {
-            "version": "==2.2.0"
+            "version": "==1.4.34"
         },
         "pytest": {
-            "version": "==3.1.0"
+            "version": "==3.1.2"
         },
         "pytest-cov": {
             "version": "==2.5.1"
         },
         "requests": {
-            "version": "==2.14.2"
+            "version": "==2.17.3"
         },
         "requests-mock": {
             "version": "==1.3.0"
         },
         "setuptools": {
-            "version": "==35.0.2"
+            "version": "==36.0.1"
         },
         "six": {
             "version": "==1.10.0"
+        },
+        "urllib3": {
+            "version": "==1.21.1"
         }
     }
 }
