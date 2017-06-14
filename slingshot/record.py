@@ -4,8 +4,6 @@ from __future__ import absolute_import
 import json
 import arrow
 
-from slingshot.parsers import parse
-
 
 class Enum(object):
     def __init__(self, *args):
