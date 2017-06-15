@@ -67,7 +67,7 @@ def make_uuid(value, namespace='mit.edu'):
     try:
         ns = uuid.uuid5(uuid.NAMESPACE_DNS, namespace)
         uid = uuid.uuid5(ns, value)
-    except UnicodeDecodeError:
+    except UnicodeDecodeError:  # pragma: no cover
         # Python 2 requires a byte string for the second argument.
         # Python 3 requires a unicode string for the second argument.
         value, namespace = [bytearray(s, 'utf-8') for s in (value, namespace)]

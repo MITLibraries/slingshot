@@ -1,9 +1,9 @@
 import re
 
 import pytest
-from shapefile import Reader
 from sqlalchemy import Boolean, Date, Float, Integer, Text
 
+from slingshot.app import ShapeReader
 from slingshot.db import (
     metadata,
     multiply,
@@ -94,46 +94,46 @@ def test_multiply_does_not_modify_points():
 
 
 def test_pg_reader_read_returns_size(shapefile_unpacked):
-    shp = Reader(shapefile_unpacked + '/bermuda.shp')
-    pg = PGShapeReader(shp, 4326)
-    assert pg.read(17) == '1\t45683\t58443\t32.'
+    with ShapeReader(shapefile_unpacked + '/bermuda.shp') as shp:
+        pg = PGShapeReader(shp, 4326)
+        assert pg.read(17) == '1\t45683\t58443\t32.'
 
 
 def test_pg_reader_reads_to_end(shapefile_unpacked):
-    shp = Reader(shapefile_unpacked + '/bermuda.shp')
-    pg = PGShapeReader(shp, 4326)
-    buf = ''
-    while True:
-        chunk = pg.read(1024)
-        if not chunk:
-            break
-        buf += chunk
-    assert re.search('Zeta Island\t1995-08-16\tSRID=4326;POINT '
-                     '\(-64\.[0-9]+ 32\.[0-9]+\)\n$', buf)
+    with ShapeReader(shapefile_unpacked + '/bermuda.shp') as shp:
+        pg = PGShapeReader(shp, 4326)
+        buf = ''
+        while True:
+            chunk = pg.read(1024)
+            if not chunk:
+                break
+            buf += chunk
+        assert re.search('Zeta Island\t1995-08-16\tSRID=4326;POINT '
+                         '\(-64\.[0-9]+ 32\.[0-9]+\)\n$', buf)
 
 
 def test_pg_reader_reads_all(shapefile_unpacked):
-    shp = Reader(shapefile_unpacked + '/bermuda.shp')
-    pg = PGShapeReader(shp, 4326)
-    buf = pg.read()
-    assert re.search('Zeta Island\t1995-08-16\tSRID=4326;POINT '
-                     '\(-64\.[0-9]+ 32\.[0-9]+\)\n$', buf)
+    with ShapeReader(shapefile_unpacked + '/bermuda.shp') as shp:
+        pg = PGShapeReader(shp, 4326)
+        buf = pg.read()
+        assert re.search('Zeta Island\t1995-08-16\tSRID=4326;POINT '
+                         '\(-64\.[0-9]+ 32\.[0-9]+\)\n$', buf)
 
 
 def test_pg_reader_reads_line(shapefile_unpacked):
-    shp = Reader(shapefile_unpacked + '/bermuda.shp')
-    pg = PGShapeReader(shp, 4326)
-    assert pg.readline().startswith('1\t45683\t58443')
+    with ShapeReader(shapefile_unpacked + '/bermuda.shp') as shp:
+        pg = PGShapeReader(shp, 4326)
+        assert pg.readline().startswith('1\t45683\t58443')
 
 
 def test_pg_reader_readline_reads_to_end(shapefile_unpacked):
-    shp = Reader(shapefile_unpacked + '/bermuda.shp')
-    pg = PGShapeReader(shp, 4326)
-    buf = ''
-    while True:
-        line = pg.readline()
-        if not line:
-            break
-        buf += line
-    assert re.search('Zeta Island\t1995-08-16\tSRID=4326;POINT '
-                     '\(-64\.[0-9]+ 32\.[0-9]+\)\n$', buf)
+    with ShapeReader(shapefile_unpacked + '/bermuda.shp') as shp:
+        pg = PGShapeReader(shp, 4326)
+        buf = ''
+        while True:
+            line = pg.readline()
+            if not line:
+                break
+            buf += line
+        assert re.search('Zeta Island\t1995-08-16\tSRID=4326;POINT '
+                         '\(-64\.[0-9]+ 32\.[0-9]+\)\n$', buf)

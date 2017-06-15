@@ -1,17 +1,23 @@
 notifications:
   email: false
 language: python
+services:
+    - postgresql
+env:
+  global:
+    POSTGIS_DB="postgresql://postgres@localhost/slingshot_test"
 matrix:
   include:
-    - env: TOX_ENV=py27
+    - env: TOX_ENV=py27-integration
     - python: 3.5
-      env: TOX_ENV=py35
-    - python: 3.5
-      env: TOX_ENV=setup
+      env: TOX_ENV=py35-integration
     - python: 3.5
       env: TOX_ENV=flake8
     - python: 3.5
       env: TOX_ENV=coveralls
+before_script:
+    - psql -U postgres -c "CREATE DATABASE slingshot_test;"
+    - psql -U postgres -d slingshot_test -c "CREATE EXTENSION postgis;"
 install:
   - pip install tox
 script:

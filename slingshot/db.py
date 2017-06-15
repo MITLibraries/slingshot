@@ -21,6 +21,7 @@ class Engine(object):
 
     def configure(self, url):
         self._engine = self._engine or create_engine(url)
+        metadata.bind = self._engine
 
 
 engine = Engine()
