@@ -202,21 +202,37 @@ def load_layer(bag):
             encoding = fp.read().strip()
     except:
         encoding = 'UTF-8'
-    sf = Reader(bag.shp)
-    geom_type = GEOM_TYPES[sf.shapeType]
-    fields = sf.fields[1:]
-    t = table(bag.name, geom_type, srid, fields)
-    if t.exists():
-        raise Exception('Table {} already exists'.format(bag.name))
-    t.create()
-    try:
-        with engine().begin() as conn:
-            reader = PGShapeReader(sf, srid, encoding)
-            cursor = conn.connection.cursor()
-            cursor.copy_from(reader, '"{}"'.format(bag.name))
-        with engine().connect() as conn:
-            conn.execute('CREATE INDEX "idx_{}_geom" ON "{}" USING GIST '
-                         '(geom)'.format(bag.name, bag.name))
-    except:
-        t.drop()
-        raise
+    with ShapeReader(bag.shp) as sf:
+        geom_type = GEOM_TYPES[sf.shapeType]
+        fields = sf.fields[1:]
+        t = table(bag.name, geom_type, srid, fields)
+        if t.exists():
+            raise Exception('Table {} already exists'.format(bag.name))
+        t.create()
+        try:
+            with engine().begin() as conn:
+                reader = PGShapeReader(sf, srid, encoding)
+                cursor = conn.connection.cursor()
+                cursor.copy_from(reader, '"{}"'.format(bag.name))
+            with engine().connect() as conn:
+                conn.execute('CREATE INDEX "idx_{}_geom" ON "{}" USING GIST '
+                             '(geom)'.format(bag.name, bag.name))
+        except:
+            t.drop()
+            raise
+
+
+class ShapeReader(Reader):
+    def __enter__(self):
+        return self
+
+    def __exit__(self, exc_type, exc_value, tb):
+        self.close()
+
+    def close(self):
+        if self.shp:
+            self.shp.close()
+        if self.shx:
+            self.shx.close()
+        if self.dbf:
+            self.dbf.close()
