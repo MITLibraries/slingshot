@@ -42,7 +42,7 @@ setup(
         'requests',
     ],
     setup_requires=[
-        'numpy', # this is required (but not specified) by rasterio
+        'numpy',  # this is required (but not specified) by rasterio
         'pytest-runner',
     ],
     tests_require=[
