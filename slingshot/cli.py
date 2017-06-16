@@ -16,7 +16,7 @@ from slingshot.app import (
     unpack_zip,
 )
 from slingshot.app import load_layer
-from slingshot.db import engine, metadata
+from slingshot.db import engine
 
 
 @click.group()
@@ -52,7 +52,6 @@ def bag(layers, bags, db_uri, workspace, public, secure):
     PostGIS. If a Bag already exists the layer will be skipped.
     """
     engine.configure(db_uri)
-    metadata.bind = engine()
     if os.path.isdir(layers):
         zips = [os.path.join(layers, l) for l in os.listdir(layers)
                 if l.endswith('.zip')]
