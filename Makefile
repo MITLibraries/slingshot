@@ -7,7 +7,7 @@ all: test
 clean:
 	find . -name "*.pyc" -print0 | xargs -0 rm -f
 	find . -name '__pycache__' -print0 | xargs -0 rm -rf
-	rm -rf .coverage .tox *.egg-info .eggs
+	rm -rf .coverage .tox *.egg-info .eggs build dist
 
 install:
 	pip install .
