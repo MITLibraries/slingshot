@@ -54,6 +54,11 @@ def bags_dir(bag):
 
 
 @pytest.fixture
+def meta_dir():
+    return tempfile.mkdtemp()
+
+
+@pytest.fixture
 def prj_4326():
     return _data_file('fixtures/4326.prj')
 

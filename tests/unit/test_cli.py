@@ -1,3 +1,5 @@
+import os
+
 from click.testing import CliRunner
 import pytest
 import requests_mock
@@ -10,7 +12,7 @@ def runner():
     return CliRunner()
 
 
-def test_publish_publishes_layer(runner, bags_dir):
+def test_publish_publishes_layer(runner, bags_dir, meta_dir):
     with requests_mock.Mocker() as m:
         m.post('mock://example.com/public/rest/workspaces/mit/datastores'
                '/data/featuretypes')
@@ -19,9 +21,11 @@ def test_publish_publishes_layer(runner, bags_dir):
         res = runner.invoke(main, ['publish', '--public',
                                    'mock://example.com/public', '--secure',
                                    'mock://example.com/secure', '--solr',
-                                   'mock://example.com/solr', bags_dir])
+                                   'mock://example.com/solr',
+                                   '--metadata', meta_dir, bags_dir])
         assert res.exit_code == 0
         assert 'Loaded bermuda' in res.output
+        assert 'bermuda.xml' in os.listdir(meta_dir)
 
 
 def test_reindex_deletes_and_reloads(runner, bags_dir):

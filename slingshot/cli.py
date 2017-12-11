@@ -87,6 +87,9 @@ def bag(layers, bags, db_uri, workspace, public, secure):
 
 @main.command()
 @click.argument('bags')
+@click.option('--metadata',
+              help='Directory where FGDC metadata will be stored. If this'
+                   ' option is omitted the metadata won\'t be copied.')
 @click.option('--workspace', default='mit',
               help='GeoServer workspace for layer.')
 @click.option('--datastore', default='data',
@@ -104,12 +107,14 @@ def bag(layers, bags, db_uri, workspace, public, secure):
               help='Username for Solr.')
 @click.option('--solr-password', envvar='SOLR_PASSWORD',
               help='Password for Solr.')
-def publish(bags, workspace, datastore, public, secure, geoserver_user,
-            geoserver_password, solr, solr_user, solr_password):
+def publish(bags, metadata, workspace, datastore, public, secure,
+            geoserver_user, geoserver_password, solr, solr_user,
+            solr_password):
     """Add layers to GeoServer and Solr.
 
     This will traverse the BAGS directory and register each layer in
-    the appropriate GeoServer instance, and add it to Solr.
+    the appropriate GeoServer instance, add it to Solr and, optionally,
+    copy the FGDC metadata to the specified directory.
     """
     gs_auth = (geoserver_user, geoserver_password) if geoserver_user and \
         geoserver_password else None
@@ -123,6 +128,9 @@ def publish(bags, workspace, datastore, public, secure, geoserver_user,
             register_layer(bag.name, geoserver, workspace, datastore,
                            auth=gs_auth)
             s.add(bag.record)
+            if metadata:
+                shutil.copy(bag.fgdc, os.path.join(metadata,
+                                                   bag.name + '.xml'))
             click.echo('Loaded {}'.format(bag.name))
         except Exception as e:
             click.echo('Failed loading {}: {}'.format(b, e))

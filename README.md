@@ -46,3 +46,10 @@ The `publish` command will traverse a given directory of bags and register each 
 #### reindex
 
 The `reindex` command deletes all the shapefiles from the Solr index, traverses the given directory of bags, and reindexes each of the layers.
+
+## Development
+
+In order to run the integration tests you will need access to a PostGIS database. Add the SQLAlchemy connection URL to a `.env` file in the project root:
+
+```
+POSTGIS_DB=postgresql://postgres@localhost/slingshot_test

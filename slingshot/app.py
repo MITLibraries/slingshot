@@ -200,7 +200,7 @@ def load_layer(bag):
     try:
         with open(bag.cst) as fp:
             encoding = fp.read().strip()
-    except:
+    except Exception:
         encoding = 'UTF-8'
     with ShapeReader(bag.shp) as sf:
         geom_type = GEOM_TYPES[sf.shapeType]
@@ -217,7 +217,7 @@ def load_layer(bag):
             with engine().connect() as conn:
                 conn.execute('CREATE INDEX "idx_{}_geom" ON "{}" USING GIST '
                              '(geom)'.format(bag.name, bag.name))
-        except:
+        except Exception:
             t.drop()
             raise
 
