@@ -1,5 +1,3 @@
-# -*- coding: utf-8 -*-
-from __future__ import absolute_import
 import os
 import tempfile
 import uuid
@@ -87,11 +85,6 @@ def test_make_uuid_creates_uuid_string():
         uuid.UUID('df04b29c-0e51-58a8-8a37-557e4f4917df')
 
 
-def test_make_uuid_works_with_unicode_values():
-    assert make_uuid(u'bermuda', u'mit.edu') == \
-        uuid.UUID('df04b29c-0e51-58a8-8a37-557e4f4917df')
-
-
 def test_make_slug_creates_slug():
     assert make_slug('bermuda') == 'mit-34clfhaokfmkq'
 
@@ -119,10 +112,10 @@ def test_geobag_returns_record(bag):
 
 def test_geobag_writes_record(bag):
     b = GeoBag(bag)
-    b.record = {'foo': 'bar'}
+    b.record = {'foo': 'ɓar'}
     with open(os.path.join(b.payload_dir, 'gbl_record.json')) as fp:
         rec = fp.read()
-    assert rec == '{\"foo\": \"bar\"}'
+    assert rec == '{\"foo\": \"ɓar\"}'
 
 
 def test_geobag_returns_path_to_fgdc(bag):
