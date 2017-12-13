@@ -1,10 +1,7 @@
 import os
 import shutil
 import tempfile
-try:
-    from unittest.mock import patch
-except ImportError:
-    from mock import patch
+from unittest.mock import patch
 
 from click.testing import CliRunner
 from dotenv import load_dotenv, find_dotenv

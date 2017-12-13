@@ -1,6 +1,3 @@
-# -*- coding: utf-8 -*-
-from __future__ import absolute_import
-
 import base64
 import json
 import os
@@ -64,16 +61,8 @@ def register_layer(layer_name, geoserver, workspace, datastore, auth=None):
 
 
 def make_uuid(value, namespace='mit.edu'):
-    try:
-        ns = uuid.uuid5(uuid.NAMESPACE_DNS, namespace)
-        uid = uuid.uuid5(ns, value)
-    except UnicodeDecodeError:  # pragma: no cover
-        # Python 2 requires a byte string for the second argument.
-        # Python 3 requires a unicode string for the second argument.
-        value, namespace = [bytearray(s, 'utf-8') for s in (value, namespace)]
-        ns = uuid.uuid5(uuid.NAMESPACE_DNS, namespace)
-        uid = uuid.uuid5(ns, value)
-    return uid
+    ns = uuid.uuid5(uuid.NAMESPACE_DNS, namespace)
+    return uuid.uuid5(ns, value)
 
 
 def make_slug(name):
@@ -129,18 +118,15 @@ class GeoBag(object):
     def record(self):
         if self._record is None:
             rec = os.path.join(self.payload_dir, 'gbl_record.json')
-            with open(rec) as fp:
+            with open(rec, encoding="utf-8") as fp:
                 self._record = json.load(fp)
         return self._record
 
     @record.setter
     def record(self, value):
         path = os.path.join(self.payload_dir, 'gbl_record.json')
-        s = json.dumps(value)
-        if not isinstance(s, bytes):
-            s = s.encode('utf-8')
-        with open(path, 'wb') as fp:
-            fp.write(s)
+        with open(path, 'w', encoding="utf-8") as fp:
+            json.dump(value, fp, ensure_ascii=False)
         self._record = value
 
     @property
