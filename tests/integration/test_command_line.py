@@ -4,7 +4,6 @@ import tempfile
 from unittest.mock import patch
 
 from click.testing import CliRunner
-from dotenv import load_dotenv, find_dotenv
 import pytest
 
 from slingshot.cli import main
@@ -18,7 +17,6 @@ def runner():
 
 @pytest.fixture
 def db():
-    load_dotenv(find_dotenv())
     uri = os.environ.get('POSTGIS_DB')
     engine.configure(uri)
     return engine
