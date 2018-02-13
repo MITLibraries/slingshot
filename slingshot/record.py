@@ -43,6 +43,8 @@ def geometry_mapper(term):
         return 'Polygon'
     elif 'composite' in term.lower():
         return 'Mixed'
+    elif 'raster' in term.lower():
+        return 'Raster'
     return term
 
 
@@ -60,7 +62,22 @@ class Record(object):
     layer_slug_s = None
 
     def __init__(self, **kwargs):
+        self.update(**kwargs)
+
+    @classmethod
+    def from_file(cls, path):
+        with open(path, encoding='utf-8') as fp:
+            record = json.load(fp)
+        return cls(**record)
+
+    def to_file(self, path):
+        with open(path, 'w', encoding='utf-8') as fp:
+            json.dump(self.as_dict(), fp, ensure_ascii=False)
+
+    def update(self, **kwargs):
         for k, v in kwargs.items():
+            if k == 'dct_references_s':
+                v = json.loads(v)
             setattr(self, k, v)
 
     @property
