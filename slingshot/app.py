@@ -1,6 +1,6 @@
 import base64
-import json
 import os
+import shutil
 import uuid
 from zipfile import ZipFile
 
@@ -21,11 +21,14 @@ GEOM_TYPES = {
     8: 'MULTIPOINT',
 }
 
+SUPPORTED_EXT = ('.shp', '.tif', '.tiff')
+
 
 def unpack_zip(source, destination):
     with ZipFile(source) as zf:
-        if not any([m.lower().endswith('.shp') for m in zf.namelist()]):
-            raise "Only shapefiles are currently supported"
+        if not [f for f in zf.namelist()
+                if os.path.splitext(f)[1] in SUPPORTED_EXT]:
+            raise "Only Shapefiles and GeoTIFFs are currently supported."
         for f in [m for m in zf.namelist() if not m.endswith('/')]:
             f_dest = os.path.join(destination, os.path.basename(f))
             with open(f_dest, 'wb') as fp, zf.open(f) as zp:
@@ -36,13 +39,16 @@ def unpack_zip(source, destination):
                     fp.write(chunk)
 
 
-def create_record(bag, public, secure, **kwargs):
+def create_record(bag, public, secure, workspace):
     r = parse(bag.fgdc, FGDCParser)
-    r.update(**kwargs)
-    record = MitRecord(solr_geom=(r['_bbox_w'], r['_bbox_e'], r['_bbox_n'],
-                                  r['_bbox_s']), **r)
+    record = MitRecord(**r)
+    record.update(dc_type_s='Dataset',
+                  dc_format_s=bag.format,
+                  layer_id_s='{}:{}'.format(workspace, bag.name),
+                  solr_geom=(r['_bbox_w'], r['_bbox_e'],
+                             r['_bbox_n'], r['_bbox_s'],),
+                  layer_slug_s=make_slug(bag.name))
     gs = public if record.dc_rights_s == 'Public' else secure
-    gs = gs.rstrip('/')
     refs = {
         'http://www.opengis.net/def/serviceType/ogc/wms': '{}/wms'.format(gs),
         'http://www.opengis.net/def/serviceType/ogc/wfs': '{}/wfs'.format(gs),
@@ -51,13 +57,90 @@ def create_record(bag, public, secure, **kwargs):
     return record
 
 
-def register_layer(layer_name, geoserver, workspace, datastore, auth=None):
-    url = '{}/rest/workspaces/{}/datastores/{}/featuretypes'.format(
-        geoserver.rstrip('/'), workspace, datastore)
-    data = '<featureType><name>{}</name></featureType>'.format(layer_name)
-    r = requests.post(url, auth=auth, headers={'Content-type': 'text/xml'},
-                      data=data)
-    r.raise_for_status()
+def add_layer(bag, geoserver, workspace, datastore=None, tiff_store=None,
+              tiff_url=None):
+    if bag.format == 'Shapefile':
+        handler = FeatureHandler(bag, geoserver, workspace, datastore)
+    elif bag.format == 'GeoTiff':
+        handler = TiffHandler(bag, geoserver, workspace, tiff_store,
+                              tiff_url)
+    else:
+        raise Exception('Unknown bag format')
+    handler.add()
+
+
+class TiffHandler:
+    def __init__(self, bag, geoserver, workspace, destination, tiff_url):
+        self.bag = bag
+        self.geoserver = geoserver
+        self.workspace = workspace
+        self.destination = destination
+        self.tiff_url = tiff_url
+        access = 'public' if bag.is_public() else 'secure'
+        self.server = self.geoserver.url(access)
+
+    def add(self):
+        path = self._upload_layer(self.destination)
+        url = ("{}/rest/workspaces/{}/coveragestores/{}/external.geotiff?"
+               "configure=first&coverageName={}").format(self.server,
+                                                         self.workspace,
+                                                         self.bag.name,
+                                                         self.bag.name)
+        self.geoserver.put(url, data=path,
+                           headers={'Content-type': 'text/plain'})
+        self.bag.record \
+            .dct_references_s['http://schema.org/downloadUrl'] = \
+            self.tiff_url + os.path.split(self.bag.tif)[1]
+        self.bag.save()
+
+    def _upload_layer(self, destination):
+        """Upload the layer somewhere Web accessible.
+
+        This just copies the Tiff file from the NFS partition to a
+        directory served by Apache.
+        """
+        tiff_path = shutil.copy(self.bag.tif, os.path.join(destination))
+        return "file:" + tiff_path
+
+
+class FeatureHandler:
+    def __init__(self, bag, geoserver, workspace, datastore):
+        self.bag = bag
+        self.geoserver = geoserver
+        self.workspace = workspace
+        self.datastore = datastore
+        access = 'public' if bag.is_public() else 'secure'
+        self.server = self.geoserver.url(access)
+
+    def add(self):
+        data = '<featureType><name>{}</name></featureType>'.format(
+            self.bag.name)
+        self.geoserver.post(
+            "{}/rest/workspaces/{}/datastores/{}/featuretypes".format(
+                self.server, self.workspace, self.datastore),
+            data=data, headers={'Content-type': 'test/xml'})
+
+
+class GeoServer:
+    def __init__(self, public="", secure="", auth=None):
+        self.public = public
+        self.secure = secure
+        self.auth = auth
+        self.session = requests.Session()
+        self.session.auth = auth
+
+    def post(self, url, **kwargs):
+        r = self.session.post(url, **kwargs)
+        r.raise_for_status()
+        return r
+
+    def put(self, url, **kwargs):
+        r = self.session.put(url, **kwargs)
+        r.raise_for_status()
+        return r
+
+    def url(self, access):
+        return self.public if access == 'public' else self.secure
 
 
 def make_uuid(value, namespace='mit.edu'):
@@ -95,57 +178,29 @@ class Solr(object):
 
 class GeoBag(object):
     def __init__(self, bag):
-        self.bag = bagit.Bag(bag)
-        self._record = None
-
-    @classmethod
-    def create(cls, directory):
-        bagit.make_bag(directory)
-        return cls(directory)
+        self.bag = bag
+        try:
+            self.record = MitRecord.from_file(self.gbl_record)
+        except Exception:
+            self.record = MitRecord()
 
     def is_public(self):
-        return self.record.get('dc_rights_s', '').lower() == 'public'
+        return self.record.dc_rights_s.lower() == 'public'
 
     @property
     def payload_dir(self):
         return os.path.join(str(self.bag), 'data')
 
     @property
-    def name(self):
-        return os.path.splitext(os.path.basename(self.shp))[0]
-
-    @property
-    def record(self):
-        if self._record is None:
-            rec = os.path.join(self.payload_dir, 'gbl_record.json')
-            with open(rec, encoding="utf-8") as fp:
-                self._record = json.load(fp)
-        return self._record
-
-    @record.setter
-    def record(self, value):
-        path = os.path.join(self.payload_dir, 'gbl_record.json')
-        with open(path, 'w', encoding="utf-8") as fp:
-            json.dump(value, fp, ensure_ascii=False)
-        self._record = value
+    def gbl_record(self):
+        return os.path.join(self.payload_dir, 'gbl_record.json')
 
     @property
     def fgdc(self):
         return self._file_by_ext('.xml')
 
-    @property
-    def shp(self):
-        return self._file_by_ext('.shp')
-
-    @property
-    def prj(self):
-        return self._file_by_ext('.prj')
-
-    @property
-    def cst(self):
-        return self._file_by_ext('.cst')
-
     def save(self):
+        self.record.to_file(self.gbl_record)
         self.bag.save(manifests=True)
 
     def is_valid(self):
@@ -160,6 +215,66 @@ class GeoBag(object):
             raise Exception('Could not find file with extension {}'
                             .format(ext))
         return os.path.join(str(self.bag), fnames.pop())
+
+
+class GeoTiffBag(GeoBag):
+    format = "GeoTiff"
+
+    @property
+    def name(self):
+        return os.path.splitext(os.path.basename(self.tif))[0]
+
+    @property
+    def tif(self):
+        try:
+            return self._file_by_ext('.tif')
+        except Exception:
+            return self._file_by_ext('.tiff')
+
+
+class ShapeBag(GeoBag):
+    format = "Shapefile"
+
+    @property
+    def name(self):
+        return os.path.splitext(os.path.basename(self.shp))[0]
+
+    @property
+    def shp(self):
+        return self._file_by_ext('.shp')
+
+    @property
+    def prj(self):
+        return self._file_by_ext('.prj')
+
+    @property
+    def cst(self):
+        return self._file_by_ext('.cst')
+
+
+def load_bag(directory):
+    """Loads an existing bag."""
+    b = bagit.Bag(directory)
+    b_type = _bag_type(b)
+    if b_type == 'Shapefile':
+        return ShapeBag(b)
+    elif b_type == 'GeoTiff':
+        return GeoTiffBag(b)
+    raise "Unsupported spatial format"
+
+
+def make_bag(directory):
+    """Creates a new bag out of the given directory."""
+    bagit.make_bag(directory)
+    return load_bag(directory)
+
+
+def _bag_type(bag):
+    for path, _ in bag.entries.items():
+        if path.endswith('.shp'):
+            return 'Shapefile'
+        elif path.endswith('.tif') or path.endswith('.tiff'):
+            return 'GeoTiff'
 
 
 def get_srid(prj):

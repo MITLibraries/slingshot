@@ -41,18 +41,25 @@ def no_shp():
 @pytest.fixture
 def bag():
     d = os.path.join(tempfile.mkdtemp(), 'bermuda')
-    b = _data_file('fixtures/bermuda')
+    b = _data_file('fixtures/bags/bermuda')
     shutil.copytree(b, d)
     return d
 
 
 @pytest.fixture
-def bags_dir(bag):
-    return os.path.dirname(bag)
+def bags_dir():
+    d = os.path.join(tempfile.mkdtemp(), 'bags')
+    shutil.copytree(_data_file('fixtures/bags'), d)
+    return d
 
 
 @pytest.fixture
 def meta_dir():
+    return tempfile.mkdtemp()
+
+
+@pytest.fixture
+def tiff_store():
     return tempfile.mkdtemp()
 
 

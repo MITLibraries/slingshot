@@ -5,10 +5,11 @@ import traceback
 import click
 
 from slingshot.app import (
+    add_layer,
     create_record,
-    GeoBag,
-    make_slug,
-    register_layer,
+    GeoServer,
+    load_bag,
+    make_bag,
     Solr,
     unpack_zip,
 )
@@ -64,17 +65,11 @@ def bag(layers, bags, db_uri, workspace, public, secure):
             continue
         try:
             unpack_zip(layer, dest)
-            bag = GeoBag.create(dest)
-            record = create_record(bag,
-                                   public=public,
-                                   secure=secure,
-                                   dc_format_s='Shapefile',
-                                   dc_type_s='Dataset',
-                                   layer_id_s='{}:{}'.format(workspace, name),
-                                   layer_slug_s=make_slug(name))
-            bag.record = record.as_dict()
+            bag = make_bag(dest)
+            bag.record = create_record(bag, public, secure, workspace)
             bag.save()
-            load_layer(bag)
+            if bag.format == "Shapefile":
+                load_layer(bag)
             click.echo('Loaded layer {}'.format(name))
         except Exception as e:
             shutil.rmtree(dest, ignore_errors=True)
@@ -85,8 +80,9 @@ def bag(layers, bags, db_uri, workspace, public, secure):
 @main.command()
 @click.argument('bags')
 @click.option('--metadata',
-              help='Directory where FGDC metadata will be stored. If this'
-                   ' option is omitted the metadata won\'t be copied.')
+              help='Directory where FGDC metadata will be stored.')
+@click.option('--metadata-url',
+              help='Base URL for metadata service.')
 @click.option('--workspace', default='mit',
               help='GeoServer workspace for layer.')
 @click.option('--datastore', default='data',
@@ -104,9 +100,13 @@ def bag(layers, bags, db_uri, workspace, public, secure):
               help='Username for Solr.')
 @click.option('--solr-password', envvar='SOLR_PASSWORD',
               help='Password for Solr.')
+@click.option('--tiff-store', envvar='TIFF_STORE',
+              help='Path to Web accessible directory where TIFFs will be '
+                   'copied.')
+@click.option('--tiff-url', envvar='TIFF_URL', help='URL for TIFF store.')
 def publish(bags, metadata, workspace, datastore, public, secure,
             geoserver_user, geoserver_password, solr, solr_user,
-            solr_password):
+            solr_password, metadata_url, tiff_store, tiff_url):
     """Add layers to GeoServer and Solr.
 
     This will traverse the BAGS directory and register each layer in
@@ -118,16 +118,20 @@ def publish(bags, metadata, workspace, datastore, public, secure,
     solr_auth = (solr_user, solr_password) if solr_user and solr_password \
         else None
     s = Solr(solr, solr_auth)
+    gs = GeoServer(public=public, secure=secure, auth=gs_auth)
     for b in os.listdir(bags):
         try:
-            bag = GeoBag(os.path.join(bags, b))
-            geoserver = public if bag.is_public() else secure
-            register_layer(bag.name, geoserver, workspace, datastore,
-                           auth=gs_auth)
-            s.add(bag.record)
-            if metadata:
-                shutil.copy(bag.fgdc, os.path.join(metadata,
-                                                   bag.name + '.xml'))
+            bag = load_bag(os.path.join(bags, b))
+            add_layer(bag, gs, workspace=workspace, datastore=datastore,
+                      tiff_store=tiff_store, tiff_url=tiff_url)
+            path = shutil.copy(bag.fgdc, os.path.join(metadata,
+                                                      bag.name + '.xml'))
+            bag.record \
+                .dct_references_s['http://www.opengis.net/cat/csw/csdgm/'] = \
+                "{}/{}".format(metadata_url.rstrip("/"),
+                               os.path.split(path)[1])
+            bag.save()
+            s.add(bag.record.as_dict())
             click.echo('Loaded {}'.format(bag.name))
         except Exception as e:
             click.echo('Failed loading {}: {}'.format(b, e))
@@ -153,8 +157,8 @@ def reindex(bags, solr, solr_user, solr_password):
     s.delete('dct_provenance_s:MIT AND dc_format_s:Shapefile')
     for b in os.listdir(bags):
         try:
-            bag = GeoBag(os.path.join(bags, b))
-            s.add(bag.record)
+            bag = load_bag(os.path.join(bags, b))
+            s.add(bag.record.as_dict())
             click.echo('Indexed {}'.format(bag.name))
         except Exception as e:
             click.echo('Failed indexing {}: {}'.format(b, e))
