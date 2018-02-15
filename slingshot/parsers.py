@@ -65,9 +65,11 @@ class FGDCParser(object):
         elif elem.tag == 'accconst' and elem.text:
             self.record['dc_rights_s'] = elem.text
         elif elem.tag == 'themekey' and elem.text:
-            self.record.setdefault('dc_subject_sm', set()).add(elem.text)
+            if 'urn' in elem.attrib:
+                self.record.setdefault('dc_subject_sm', set()).add(elem.text)
         elif elem.tag == 'placekey' and elem.text:
-            self.record.setdefault('dct_spatial_sm', set()).add(elem.text)
+            if 'urn' in elem.attrib:
+                self.record.setdefault('dct_spatial_sm', set()).add(elem.text)
         elif elem.tag == 'direct' and elem.text:
             if elem.text.lower() == 'raster':
                 self.record['layer_geom_type_s'] = elem.text
