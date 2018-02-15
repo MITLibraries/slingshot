@@ -10,7 +10,7 @@ These instructions will make a `slingshot` command available from your virtualen
 
 ```bash
 $ mkdir slingshot && cd slinghost
-$ pipenv install https://github.com/MITLibraries/slingshot/zipball/v0.4.0
+$ pipenv install https://github.com/MITLibraries/slingshot/zipball/v0.5.0
 $ pipenv run slingshot --version
 ```
 
@@ -19,7 +19,7 @@ $ pipenv run slingshot --version
 ```bash
 $ python3 -m venv slingshot
 $ source slingshot/bin/activate
-(slingshot)$ pip install https://github.com/MITLibraries/slingshot/zipball/v0.4.0
+(slingshot)$ pip install https://github.com/MITLibraries/slingshot/zipball/v0.5.0
 (slingshot)$ slingshot --version
 ```
 
@@ -94,7 +94,7 @@ This will increment the version number, add a commit and create a git tag. By de
 
 ```bash
 $ pipenv run slingshot --version
-slingshot, version 0.4.0
+slingshot, version 0.3.0
 $ git checkout -b new-release
 $ make release RELEASE_TYPE=minor
 Built release for v0.4.0. Make sure to run:
