@@ -1,5 +1,6 @@
 import base64
 import os
+import re
 import shutil
 import uuid
 from zipfile import ZipFile
@@ -179,6 +180,7 @@ class Solr(object):
 class GeoBag(object):
     def __init__(self, bag):
         self.bag = bag
+        self._fgdc = None
         try:
             self.record = MitRecord.from_file(self.gbl_record)
         except Exception:
@@ -197,7 +199,21 @@ class GeoBag(object):
 
     @property
     def fgdc(self):
-        return self._file_by_ext('.xml')
+        """Full path to FGDC file."""
+        # There can sometimes be multiple XML files in a package. We will
+        # try to find an FGDC file among them.
+        if not self._fgdc:
+            files = self._files_by_ext('.xml')
+            if len(files) > 1:
+                for f in files:
+                    with open(f, encoding="utf-8") as fp:
+                        head = fp.read(1024)
+                    if re.match('\s*<metadata>', head, re.I):
+                        self._fgdc = f
+                        break
+            else:
+                self._fgdc = files[0]
+        return self._fgdc
 
     def save(self):
         self.record.to_file(self.gbl_record)
@@ -206,15 +222,29 @@ class GeoBag(object):
     def is_valid(self):
         return self.bag.is_valid()
 
-    def _file_by_ext(self, ext):
+    def _files_by_ext(self, ext):
+        """Return list of full paths to files with given extension.
+
+        Raises :class:`slingshot.app.MissingFile` exception when no
+        file with the given extension is found.
+        """
         fnames = [f for f in self.bag.payload_files()
                   if f.lower().endswith(ext.lower())]
+        if not fnames:
+            raise MissingFile('Could not find file with extension {}'
+                              .format(ext))
+        return [os.path.join(str(self.bag), name) for name in fnames]
+
+    def _file_by_ext(self, ext):
+        """Return full path to a single file with the given extension.
+
+        Raises :class:`slingshot.app.TooManyFiles` exception when more
+        than one file with the specified extension is found.
+        """
+        fnames = self._files_by_ext(ext)
         if len(fnames) > 1:
-            raise Exception('Multiple files with extension {}'.format(ext))
-        elif not fnames:
-            raise Exception('Could not find file with extension {}'
-                            .format(ext))
-        return os.path.join(str(self.bag), fnames.pop())
+            raise TooManyFiles('Multiple files with extension {}'.format(ext))
+        return fnames[0]
 
 
 class GeoTiffBag(GeoBag):
@@ -228,7 +258,7 @@ class GeoTiffBag(GeoBag):
     def tif(self):
         try:
             return self._file_by_ext('.tif')
-        except Exception:
+        except MissingFile:
             return self._file_by_ext('.tiff')
 
 
@@ -337,3 +367,11 @@ class ShapeReader(Reader):
             self.shx.close()
         if self.dbf:
             self.dbf.close()
+
+
+class MissingFile(Exception):
+    """Required file in spatial data package is missing."""
+
+
+class TooManyFiles(Exception):
+    """Too many files of the same extension found in spatial data package."""
