@@ -1,31 +1,35 @@
+from datetime import datetime
+from functools import partial
+from itertools import repeat
 import json
-import arrow
+import re
+
+import attr
+from attr import converters, validators
 
 
-class Enum(object):
-    def __init__(self, *args):
-        self.enums = args
+RIGHTS = ('Public', 'Restricted')
+TYPES = ('Dataset', 'Image', 'PhysicalObject')
+GEOMS = ('Point', 'Line', 'Polygon', 'Raster', 'Scanned Map', 'Mixed')
 
-    def __call__(self, f):
-        def wrapped(*args):
-            for arg in args[1:]:
-                if arg not in self.enums:
-                    raise InvalidDataError(f.__name__, arg)
-            f(*args)
-        return wrapped
+env_regex = re.compile(
+    "ENVELOPE\({}, {}, {}, {}\)".format(*repeat("[+-]?\d+(\.\d+)?", 4)))
+Field = partial(attr.ib, default=None)
+_set = converters.optional(set)
 
 
-def optional(f):
-    def wrapped(self):
-        try:
-            return f(self)
-        except AttributeError:
-            return None
-    return wrapped
+def one_of(items):
+    """A validator for checking membership in ``items``."""
+    return validators.optional(validators.in_(items))
 
 
-def rights_mapper(term):
-    """Maps access rights from FGDC to canonical GeoBlacklight value."""
+def rights_converter(term):
+    """A converter for normalizing the rights string.
+
+    This is based on the assumption that the FGDC rights statement will
+    contain the word ``unrestricted`` when a layer is public and
+    ``restricted`` when it is not.
+    """
     if term.lower().startswith('unrestricted'):
         return 'Public'
     elif term.lower().startswith('restricted'):
@@ -33,8 +37,8 @@ def rights_mapper(term):
     return term
 
 
-def geometry_mapper(term):
-    """Maps layer geometry from FGDC to canonical GeoBlacklight value."""
+def geom_converter(term):
+    """A converter for normalizing the geometry type."""
     if 'point' in term.lower():
         return 'Point'
     elif 'string' in term.lower():
@@ -48,205 +52,100 @@ def geometry_mapper(term):
     return term
 
 
-class Record(object):
-    dc_description_s = None
-    dc_identifier_s = None
-    dc_language_s = None
-    dc_publisher_s = None
-    dc_title_s = None
-    dct_issued_dt = None
-    dct_provenance_s = None
-    geoblacklight_version = None
-    layer_id_is = None
-    layer_modified_dt = None
-    layer_slug_s = None
+def envelope_validator(instance, attribute, value):
+    """A validator for checking the format of the envelope string."""
+    if not env_regex.fullmatch(value):
+        raise ValueError('Invalid envelope string')
 
-    def __init__(self, **kwargs):
-        self.update(**kwargs)
+
+def now():
+    """Current UTC datetime string suitable for use as a Solr dt field."""
+    return datetime.utcnow().isoformat(timespec='seconds') + 'Z'
+
+
+def solr_dt(instance, attribute, value):
+    """A validator for ensuring a datetime string is Solr compatible."""
+    datetime.strptime(value, '%Y-%m-%dT%H:%M:%SZ')
+
+
+def _filter(attribute, value):
+    if value and not attribute.name.startswith('_'):
+        return True
+
+
+@attr.s(frozen=True)
+class Record:
+    """A GeoBlacklight record.
+
+    This is an immutable GeoBlacklight record object. The only supported
+    fields are the ones defined as properties in the class definition. A
+    record can be created by passing fields as keyword arguments to the
+    constructor::
+
+        r = Record(dc_title_s='Bermuda')
+
+    While you cannot modify an existing record, you can create a new one
+    based off the old one by using the ``attr.evolve`` function::
+
+        import attr
+
+        r = Record(dc_title_s='Bermuda')
+        r = attr.evolve(r, dc_title_s='Bahamas')
+
+    """
+    dc_creator_sm = Field(converter=_set)
+    dc_description_s = Field()
+    dc_format_s = Field()
+    dc_identifier_s = Field()
+    dc_language_s = Field()
+    dc_publisher_s = Field()
+    dc_rights_s = Field(validator=one_of(RIGHTS),
+                        converter=converters.optional(rights_converter))
+    dc_source_sm = Field(converter=_set)
+    dc_subject_sm = Field(converter=_set)
+    dc_title_s = Field()
+    dc_type_s = Field(validator=one_of(TYPES))
+    dct_isPartOf_sm = Field(converter=_set)
+    dct_issued_dt = Field()
+    dct_provenance_s = Field(default='MIT')
+    dct_spatial_sm = Field(converter=_set)
+    dct_temporal_sm = Field(converter=_set)
+    dct_references_s = Field(validator=validators.optional(
+                                validators.instance_of(dict)))
+    layer_geom_type_s = Field(validator=one_of(GEOMS),
+                              converter=converters.optional(geom_converter))
+    layer_id_s = Field()
+    layer_modified_dt = Field(default=attr.Factory(now), validator=solr_dt)
+    layer_slug_s = Field()
+    solr_geom = Field(validator=validators.optional(envelope_validator))
+    geoblacklight_version = Field(default='1.0')
 
     @classmethod
     def from_file(cls, path):
+        """Create a record from the given JSON file."""
         with open(path, encoding='utf-8') as fp:
             record = json.load(fp)
+        for k, v in record.items():
+            if k == 'dct_references_s':
+                record[k] = json.loads(v)
         return cls(**record)
 
     def to_file(self, path):
+        """Save the record to the given file as JSON."""
         with open(path, 'w', encoding='utf-8') as fp:
             json.dump(self.as_dict(), fp, ensure_ascii=False)
 
-    def update(self, **kwargs):
-        for k, v in kwargs.items():
-            if k == 'dct_references_s':
-                v = json.loads(v)
-            setattr(self, k, v)
-
-    @property
-    @optional
-    def dc_creator_sm(self):
-        return self._dc_creator_sm
-
-    @dc_creator_sm.setter
-    def dc_creator_sm(self, value):
-        self._dc_creator_sm = set(value)
-
-    @property
-    @optional
-    def dc_format_s(self):
-        return self._dc_format_s
-
-    @dc_format_s.setter
-    def dc_format_s(self, value):
-        self._dc_format_s = value
-
-    @property
-    def dc_rights_s(self):
-        return self._dc_rights_s
-
-    @dc_rights_s.setter
-    @Enum('Public', 'Restricted')
-    def dc_rights_s(self, value):
-        self._dc_rights_s = value
-
-    @property
-    @optional
-    def dc_source_sm(self):
-        return self._dc_source_sm
-
-    @dc_source_sm.setter
-    def dc_source_sm(self, value):
-        self._dc_source_dm = set(value)
-
-    @property
-    @optional
-    def dc_subject_sm(self):
-        return self._dc_subject_sm
-
-    @dc_subject_sm.setter
-    def dc_subject_sm(self, value):
-        self._dc_subject_sm = set(value)
-
-    @property
-    @optional
-    def dc_type_s(self):
-        return self._dc_type_s
-
-    @dc_type_s.setter
-    @Enum('Dataset', 'Image', 'PhysicalObject')
-    def dc_type_s(self, value):
-        self._dc_type_s = value
-
-    @property
-    @optional
-    def dct_isPartOf_sm(self):
-        return self._dct_isPartOf_sm
-
-    @dct_isPartOf_sm.setter
-    def dct_isPartOf_sm(self, value):
-        self._dct_isPartOf_sm = set(value)
-
-    @property
-    def dct_references_s(self):
-        return self._dct_references_s
-
-    @dct_references_s.setter
-    def dct_references_s(self, value):
-        self._dct_references_s = dict(value)
-
-    @property
-    @optional
-    def dct_spatial_sm(self):
-        return self._dct_spatial_sm
-
-    @dct_spatial_sm.setter
-    def dct_spatial_sm(self, value):
-        self._dct_spatial_sm = set(value)
-
-    @property
-    @optional
-    def dct_temporal_sm(self):
-        return self._dct_temporal_sm
-
-    @dct_temporal_sm.setter
-    def dct_temporal_sm(self, value):
-        self._dct_temporal_sm = set(value)
-
-    @property
-    def layer_geom_type_s(self):
-        return self._layer_geom_type_s
-
-    @layer_geom_type_s.setter
-    @Enum('Point', 'Line', 'Polygon', 'Raster', 'Scanned Map', 'Mixed')
-    def layer_geom_type_s(self, value):
-        self._layer_geom_type_s = value
-
-    @property
-    def solr_geom(self):
-        return self._solr_geom
-
-    @solr_geom.setter
-    def solr_geom(self, values):
-        """W,E,N,S"""
-        self._solr_geom = "ENVELOPE({}, {}, {}, {})".format(*values)
-
     def as_dict(self):
-        record = {
-            'dc_creator_sm': list(self.dc_creator_sm or []),
-            'dc_description_s': self.dc_description_s,
-            'dc_format_s': self.dc_format_s,
-            'dc_identifier_s': self.dc_identifier_s,
-            'dc_language_s': self.dc_language_s,
-            'dc_publisher_s': self.dc_publisher_s,
-            'dc_rights_s': self.dc_rights_s,
-            'dc_source_sm': list(self.dc_source_sm or []),
-            'dc_subject_sm': list(self.dc_subject_sm or []),
-            'dc_title_s': self.dc_title_s,
-            'dc_type_s': self.dc_type_s,
-            'dct_isPartOf_sm': list(self.dct_isPartOf_sm or []),
-            'dct_issued_dt': self.dct_issued_dt,
-            'dct_provenance_s': self.dct_provenance_s,
-            'dct_references_s': json.dumps(self.dct_references_s),
-            'dct_spatial_sm': list(self.dct_spatial_sm or []),
-            'dct_temporal_sm': list(self.dct_temporal_sm or []),
-            'geoblacklight_version': self.geoblacklight_version,
-            'layer_geom_type_s': self.layer_geom_type_s,
-            'layer_id_s': self.layer_id_s,
-            'layer_modified_dt': self.layer_modified_dt,
-            'layer_slug_s': self.layer_slug_s,
-            'solr_geom': self.solr_geom,
-        }
-        return {k: v for k, v in record.items() if v}
+        """Return record as dictionary.
 
-    def to_json(self):
-        return json.dumps(self.as_dict())
+        The returned dictionary will have all empty fields removed, as well
+        as all fields beginning with an underscore. The ``dct_references_s``
+        field will be serialzed to a JSON formatted string.
 
-
-class MitRecord(Record):
-    dct_provenance_s = 'MIT'
-    geoblacklight_version = '1.0'
-
-    @Record.dc_rights_s.setter
-    def dc_rights_s(self, value):
-        super(MitRecord, MitRecord).dc_rights_s.fset(self,
-                                                     rights_mapper(value))
-
-    @Record.layer_geom_type_s.setter
-    def layer_geom_type_s(self, value):
-        super(MitRecord, MitRecord).\
-            layer_geom_type_s.fset(self, geometry_mapper(value))
-
-    @property
-    def layer_modified_dt(self):
-        return self.__dict__ \
-            .setdefault('_layer_modified_dt',
-                        arrow.utcnow().format('YYYY-MM-DDTHH:mm:ss') + 'Z')
-
-    @layer_modified_dt.setter
-    def layer_modified_dt(self, value):
-        self._layer_modified_dt = \
-            arrow.get(value).format('YYYY-MM-DDTHH:mm:ss') + 'Z'
-
-
-class InvalidDataError(Exception):
-    def __init__(self, field, value):
-        self.field = field
-        self.value = value
+        This dictionary should be suitable for passing directly to
+        ``json.dump`` or for loading directly into Solr, for example.
+        """
+        record = attr.asdict(self, filter=_filter)
+        if 'dct_references_s' in record:
+            record['dct_references_s'] = json.dumps(record['dct_references_s'])
+        return record

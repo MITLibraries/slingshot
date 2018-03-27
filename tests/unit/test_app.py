@@ -3,6 +3,7 @@ import os
 import tempfile
 import uuid
 
+import attr
 import bagit
 import pytest
 import requests_mock
@@ -121,7 +122,7 @@ def test_geobag_returns_record(bag):
 
 def test_geobag_writes_record_on_save(bag):
     b = GeoBag(bagit.Bag(bag))
-    b.record.dc_title_s = 'Fooɓar'
+    b.record = attr.evolve(b.record, dc_title_s='Fooɓar')
     b.save()
     with open(os.path.join(b.payload_dir, 'gbl_record.json')) as fp:
         rec = json.load(fp)
@@ -149,7 +150,7 @@ def test_shapebag_returns_path_to_cst_file(bag):
 
 def test_geobag_updates_bag_on_save(bag):
     b = GeoBag(bagit.Bag(bag))
-    b.record.dc_title_s = 'foobar'
+    b.record = attr.evolve(b.record, dc_title_s='foobar')
     b.save()
     assert b.is_valid()
 
