@@ -5,6 +5,7 @@ import shutil
 import uuid
 from zipfile import ZipFile
 
+import attr
 import bagit
 import requests
 from shapefile import Reader
@@ -12,7 +13,7 @@ from shapefile import Reader
 from slingshot.db import engine, table, PGShapeReader
 from slingshot.parsers import FGDCParser, parse
 from slingshot.proj import parser
-from slingshot.record import MitRecord
+from slingshot.record import Record
 
 
 GEOM_TYPES = {
@@ -42,19 +43,20 @@ def unpack_zip(source, destination):
 
 def create_record(bag, public, secure, workspace):
     r = parse(bag.fgdc, FGDCParser)
-    record = MitRecord(**r)
-    record.update(dc_type_s='Dataset',
-                  dc_format_s=bag.format,
-                  layer_id_s='{}:{}'.format(workspace, bag.name),
-                  solr_geom=(r['_bbox_w'], r['_bbox_e'],
-                             r['_bbox_n'], r['_bbox_s'],),
-                  layer_slug_s=make_slug(bag.name))
+    record = Record(**{k: v for k,v in r.items() if not k.startswith('_')})
     gs = public if record.dc_rights_s == 'Public' else secure
     refs = {
         'http://www.opengis.net/def/serviceType/ogc/wms': '{}/wms'.format(gs),
         'http://www.opengis.net/def/serviceType/ogc/wfs': '{}/wfs'.format(gs),
     }
-    record.dct_references_s = refs
+    geom = "ENVELOPE({}, {}, {}, {})".format(r['_bbox_w'], r['_bbox_e'],
+                                             r['_bbox_n'], r['_bbox_s'])
+    record = attr.evolve(record, dc_type_s='Dataset',
+                         dc_format_s=bag.format,
+                         layer_id_s='{}:{}'.format(workspace, bag.name),
+                         solr_geom=geom,
+                         layer_slug_s=make_slug(bag.name),
+                         dct_references_s=refs)
     return record
 
 
@@ -182,9 +184,9 @@ class GeoBag(object):
         self.bag = bag
         self._fgdc = None
         try:
-            self.record = MitRecord.from_file(self.gbl_record)
+            self.record = Record.from_file(self.gbl_record)
         except Exception:
-            self.record = MitRecord()
+            self.record = Record()
 
     def is_public(self):
         return self.record.dc_rights_s.lower() == 'public'
