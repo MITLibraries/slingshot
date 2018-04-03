@@ -10,7 +10,7 @@ import bagit
 import requests
 from shapefile import Reader
 
-from slingshot.db import engine, table, PGShapeReader
+from slingshot.db import engine, table, PGShapeReader, table_name
 from slingshot.parsers import FGDCParser, parse
 from slingshot.proj import parser
 from slingshot.record import Record
@@ -346,10 +346,10 @@ def load_layer(bag):
             with engine().begin() as conn:
                 reader = PGShapeReader(sf, srid, encoding)
                 cursor = conn.connection.cursor()
-                cursor.copy_from(reader, '"{}"'.format(bag.name))
+                cursor.copy_from(reader, table_name(t))
             with engine().connect() as conn:
-                conn.execute('CREATE INDEX "idx_{}_geom" ON "{}" USING GIST '
-                             '(geom)'.format(bag.name, bag.name))
+                conn.execute('CREATE INDEX "idx_{}_geom" ON {} USING GIST '
+                             '(geom)'.format(bag.name, table_name(t)))
         except Exception:
             t.drop()
             raise
