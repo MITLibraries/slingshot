@@ -24,7 +24,9 @@ def db():
 
 @pytest.fixture(autouse=True)
 def db_setup(db):
-    metadata.drop_all()
+    if db().has_table('bermuda', schema='geodata'):
+        with db().connect() as conn:
+            conn.execute("DROP TABLE geodata.bermuda")
     metadata.clear()
 
 
@@ -38,7 +40,7 @@ def test_bag_loads_shapefile(db, runner, shapefile):
                                'mock://example.com', layers, store])
     assert res.exit_code == 0
     with db().connect() as conn:
-        r = conn.execute('SELECT COUNT(*) FROM bermuda').scalar()
+        r = conn.execute('SELECT COUNT(*) FROM geodata.bermuda').scalar()
         assert r == 713
 
 

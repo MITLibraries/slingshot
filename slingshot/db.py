@@ -25,7 +25,7 @@ class Engine(object):
 
 
 engine = Engine()
-metadata = MetaData()
+metadata = MetaData(schema='geodata')
 
 
 def table(name, gtype, srid, fields):
@@ -37,6 +37,12 @@ def table(name, gtype, srid, fields):
         gtype = 'MULTILINESTRING'
     cols.append(Column('geom', Geometry(gtype, srid, spatial_index=False)))
     return Table(name, metadata, *cols)
+
+
+def table_name(table):
+    schema = table.schema or 'public'
+    name = table.name
+    return '"{}"."{}"'.format(schema, name)
 
 
 def _make_column(field):
