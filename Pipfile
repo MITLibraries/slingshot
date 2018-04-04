@@ -12,9 +12,9 @@ geomet = "*"
 "psycopg2-binary" = "*"
 pyshp = "*"
 requests = "*"
-"GeoAlchemy2" = "*"
-PlyPlus = "*"
-attr = "*"
+"geoalchemy2" = "*"
+plyplus = "*"
+attrs = "*"
 
 
 [dev-packages]
