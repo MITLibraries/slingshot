@@ -121,7 +121,7 @@ class FeatureHandler:
         self.geoserver.post(
             "{}/rest/workspaces/{}/datastores/{}/featuretypes".format(
                 self.server, self.workspace, self.datastore),
-            data=data, headers={'Content-type': 'test/xml'})
+            data=data, headers={'Content-type': 'text/xml'})
 
 
 class GeoServer:
