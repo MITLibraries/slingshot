@@ -71,7 +71,7 @@ def prep_field(field, _type, encoding):
     if _type == 'C':
         if type(field) is bytes:
             field = field.decode(encoding)
-        quotable = (u'\t', u'\n', u'\r', u'\.')
+        quotable = ('\\', u'\t', u'\n', u'\r', u'\.')
         for q in quotable:
             field = field.replace(q, u'\\' + q)
         return field
