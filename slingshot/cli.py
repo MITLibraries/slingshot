@@ -127,7 +127,7 @@ def publish(bags, metadata, workspace, datastore, public, secure,
             path = shutil.copy(bag.fgdc, os.path.join(metadata,
                                                       bag.name + '.xml'))
             bag.record \
-                .dct_references_s['http://www.opengis.net/cat/csw/csdgm/'] = \
+                .dct_references_s['http://www.opengis.net/cat/csw/csdgm'] = \
                 "{}/{}".format(metadata_url.rstrip("/"),
                                os.path.split(path)[1])
             bag.save()
