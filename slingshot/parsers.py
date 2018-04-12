@@ -33,20 +33,18 @@ class FGDCParser(object):
     def __init__(self):
         #: Parsed GeoBlacklight record
         self.record = {}
+        self.stack = []
 
     def start_handler(self, elem):
         """
         Start handler called when encountering a new element.
-
-        No-op.
         """
-
-        pass
+        self.stack.append(elem.tag)
 
     def end_handler(self, elem):
         """End handler called when encountering the end of an element."""
 
-        if elem.tag == 'title' and elem.text:
+        if elem.tag == 'title' and self.stack[-3] == 'citation' and elem.text:
             self.record['dc_title_s'] = elem.text
         elif elem.tag == 'origin' and elem.text:
             self.record.setdefault('dc_creator_sm', set()).add(elem.text)
@@ -75,3 +73,4 @@ class FGDCParser(object):
                 self.record['layer_geom_type_s'] = elem.text
         elif elem.tag == 'sdtstype' and elem.text:
             self.record['layer_geom_type_s'] = elem.text
+        self.stack.pop()
