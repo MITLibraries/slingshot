@@ -10,7 +10,7 @@ These instructions will make a `slingshot` command available from your virtualen
 
 ```bash
 $ mkdir slingshot && cd slinghost
-$ pipenv install https://github.com/MITLibraries/slingshot/zipball/v0.6.0
+$ pipenv install https://github.com/MITLibraries/slingshot/zipball/v0.7.0
 $ pipenv run slingshot --version
 ```
 
@@ -19,7 +19,7 @@ $ pipenv run slingshot --version
 ```bash
 $ python3 -m venv slingshot
 $ source slingshot/bin/activate
-(slingshot)$ pip install https://github.com/MITLibraries/slingshot/zipball/v0.6.0
+(slingshot)$ pip install https://github.com/MITLibraries/slingshot/zipball/v0.7.0
 (slingshot)$ slingshot --version
 ```
 
