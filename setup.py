@@ -35,6 +35,7 @@ setup(
         'geomet',
         'plyplus',
         'psycopg2-binary',
+        'pymarc',
         'pyshp',
         'requests',
     ],
