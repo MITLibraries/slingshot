@@ -15,6 +15,7 @@ requests = "*"
 "geoalchemy2" = "*"
 plyplus = "*"
 attrs = "*"
+pymarc = "*"
 
 
 [dev-packages]

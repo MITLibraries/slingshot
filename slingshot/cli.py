@@ -10,11 +10,14 @@ from slingshot.app import (
     GeoServer,
     load_bag,
     make_bag,
+    make_slug,
     Solr,
     unpack_zip,
 )
 from slingshot.app import load_layer
 from slingshot.db import engine
+from slingshot.marc import MarcParser
+from slingshot.record import Record
 
 
 @click.group()
@@ -162,4 +165,36 @@ def reindex(bags, solr, solr_user, solr_password):
             click.echo('Indexed {}'.format(bag.name))
         except Exception as e:
             click.echo('Failed indexing {}: {}'.format(b, e))
+    s.commit()
+
+
+@main.command()
+@click.argument('marc_file')
+@click.option('--solr', envvar='SOLR', help='URL for Solr isntance.')
+@click.option('--solr-user', envvar='SOLR_USER',
+              help='Username for Solr.')
+@click.option('--solr-password', envvar='SOLR_PASSWORD',
+              help='Password for Solr.')
+def marc(marc_file, solr, solr_user, solr_password):
+    """Index MARC records into Solr.
+
+    This will delete existing MIT records with a dc_format_s of
+    "Paper Map" or "Cartographic Material", and then index all appropriate
+    records from the provided MARC XML file.
+    """
+    solr_auth = (solr_user, solr_password) if solr_user and solr_password \
+        else None
+    s = Solr(solr, solr_auth)
+    s.delete('dct_provenance_s:MIT AND dc_format_s:"Paper Map"')
+    s.delete('dct_provenance_s:MIT AND dc_format_s:"Cartographic Material"')
+    for record in MarcParser(marc_file):
+        try:
+            if record.get('dc_format_s') and \
+                record.get('_location') in ('Map Room', 'GIS Collection'):
+                del(record['_location'])
+                record['layer_slug_s'] = make_slug(record['dc_identifier_s'])
+                gbl_record = Record(**record)
+                s.add(gbl_record.as_dict())
+        except Exception as e:
+            click.echo('Failed indexing {}: {}'.format(record['dc_identifier_s'], e))
     s.commit()

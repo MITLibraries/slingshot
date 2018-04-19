@@ -9,7 +9,7 @@ from attr import converters, validators
 
 
 RIGHTS = ('Public', 'Restricted')
-TYPES = ('Dataset', 'Image', 'PhysicalObject')
+TYPES = ('Dataset', 'Image', 'Physical Object')
 GEOMS = ('Point', 'Line', 'Polygon', 'Raster', 'Scanned Map', 'Mixed')
 
 env_regex = re.compile(
