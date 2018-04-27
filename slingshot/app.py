@@ -77,10 +77,10 @@ class TiffHandler:
         self.bag = bag
         self.geoserver = geoserver
         self.workspace = workspace
-        self.destination = destination
         self.tiff_url = tiff_url
         access = 'public' if bag.is_public() else 'secure'
         self.server = self.geoserver.url(access)
+        self.destination = os.path.join(destination, access)
 
     def add(self):
         path = self._upload_layer(self.destination)
@@ -102,7 +102,7 @@ class TiffHandler:
         This just copies the Tiff file from the NFS partition to a
         directory served by Apache.
         """
-        tiff_path = shutil.copy(self.bag.tif, os.path.join(destination))
+        tiff_path = shutil.copy(self.bag.tif, destination)
         return "file:" + tiff_path
 
 
