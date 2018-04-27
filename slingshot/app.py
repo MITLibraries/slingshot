@@ -1,9 +1,12 @@
 import base64
 import os
-import re
 import shutil
 import uuid
 from zipfile import ZipFile
+try:
+    from lxml.etree import iterparse
+except ImportError:
+    from xml.etree.ElementTree import iterparse
 
 import attr
 import bagit
@@ -208,10 +211,10 @@ class GeoBag(object):
             files = self._files_by_ext('.xml')
             if len(files) > 1:
                 for f in files:
-                    with open(f, encoding="utf-8") as fp:
-                        head = fp.read(1024)
-                    if re.match('\s*<metadata>', head, re.I):
-                        self._fgdc = f
+                    for _, elem in iterparse(f, events=('start',)):
+                        if elem.tag == 'metadata':
+                            self._fgdc = f
+                            return self._fgdc
                         break
             else:
                 self._fgdc = files[0]
