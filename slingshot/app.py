@@ -80,10 +80,12 @@ class TiffHandler:
         self.bag = bag
         self.geoserver = geoserver
         self.workspace = workspace
-        self.tiff_url = tiff_url
         access = 'public' if bag.is_public() else 'secure'
         self.server = self.geoserver.url(access)
         self.destination = os.path.join(destination, access)
+        self.tiff_url = '{}/{}/{}'.format(tiff_url.rstrip('/'),
+                                          access,
+                                          os.path.split(self.bag.tif)[1])
 
     def add(self):
         path = self._upload_layer(self.destination)
@@ -95,8 +97,7 @@ class TiffHandler:
         self.geoserver.put(url, data=path,
                            headers={'Content-type': 'text/plain'})
         self.bag.record \
-            .dct_references_s['http://schema.org/downloadUrl'] = \
-            self.tiff_url + os.path.split(self.bag.tif)[1]
+            .dct_references_s['http://schema.org/downloadUrl'] = self.tiff_url
         self.bag.save()
 
     def _upload_layer(self, destination):
