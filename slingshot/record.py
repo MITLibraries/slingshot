@@ -10,7 +10,7 @@ from attr import converters, validators
 
 RIGHTS = ('Public', 'Restricted')
 TYPES = ('Dataset', 'Image', 'Physical Object')
-GEOMS = ('Point', 'Line', 'Polygon', 'Raster', 'Scanned Map', 'Mixed')
+GEOMS = ('Point', 'Line', 'Polygon', 'Image', 'Raster', 'Mixed')
 
 env_regex = re.compile(
     "ENVELOPE\({}, {}, {}, {}\)".format(*repeat("[+-]?\d+(\.\d+)?", 4)))
@@ -48,7 +48,7 @@ def geom_converter(term):
     elif 'composite' in term.lower():
         return 'Mixed'
     elif 'raster' in term.lower():
-        return 'Raster'
+        return 'Image'
     return term
 
 
