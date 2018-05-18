@@ -45,7 +45,7 @@ The `bag` command will traverse a given directory of zipped shapefiles and perfo
 
 1. Unpack the zipfile to a new location
 2. Create a bag of the unpacked zipfile
-3. Add a GeoBlacklight metadata record to the bag called `gbl_record.json`
+3. Add a GeoBlacklight metadata record to the bag called `geoblacklight.json`
 4. Load the shapefile into PostGIS
 
 If any of these steps fail, the bag will be removed.

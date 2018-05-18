@@ -124,7 +124,7 @@ def test_geobag_writes_record_on_save(bag):
     b = GeoBag(bagit.Bag(bag))
     b.record = attr.evolve(b.record, dc_title_s='Fooɓar')
     b.save()
-    with open(os.path.join(b.payload_dir, 'gbl_record.json')) as fp:
+    with open(os.path.join(b.payload_dir, 'geoblacklight.json')) as fp:
         rec = json.load(fp)
     assert rec['dc_title_s'] == "Fooɓar"
 
