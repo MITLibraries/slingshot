@@ -4,4 +4,4 @@
 a3b1f42bbd2f1ebbf9b40daa93b3adf3  data/bermuda.shp
 abd3fb472170a6fa37496175c5fac4b2  data/bermuda.shx
 38d38fb5cdec69be8f8fb062bd86dd97  data/bermuda.xml
-6d4f419239fdca1e17cfe3bae06c56b1  data/gbl_record.json
+54223c8deb5b75db0fc48439024f205d  data/geoblacklight.json

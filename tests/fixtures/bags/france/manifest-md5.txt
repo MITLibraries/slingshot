@@ -1,3 +1,3 @@
 bf513df1aa06e16af0dfa190d584301c  data/france.tiff
 b1765caa59d597c523f850b07de8820b  data/france.xml
-9577dc58adbc11f296a9908612442a3c  data/gbl_record.json
+9577dc58adbc11f296a9908612442a3c  data/geoblacklight.json

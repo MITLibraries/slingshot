@@ -201,7 +201,7 @@ class GeoBag(object):
 
     @property
     def gbl_record(self):
-        return os.path.join(self.payload_dir, 'gbl_record.json')
+        return os.path.join(self.payload_dir, 'geoblacklight.json')
 
     @property
     def fgdc(self):
