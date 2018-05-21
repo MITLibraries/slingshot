@@ -125,10 +125,13 @@ def publish(bags, metadata, workspace, datastore, public, secure,
     for b in os.listdir(bags):
         try:
             bag = load_bag(os.path.join(bags, b))
+            metadata_path = os.path.join(metadata, bag.name + '.xml')
+            # Assume the layer is already published if metadata file exists
+            if os.path.isfile(metadata_path):
+                continue
             add_layer(bag, gs, workspace=workspace, datastore=datastore,
                       tiff_store=tiff_store, tiff_url=tiff_url)
-            path = shutil.copy(bag.fgdc, os.path.join(metadata,
-                                                      bag.name + '.xml'))
+            path = shutil.copy(bag.fgdc, metadata_path)
             bag.record \
                 .dct_references_s['http://www.opengis.net/cat/csw/csdgm'] = \
                 "{}/{}".format(metadata_url.rstrip("/"),
