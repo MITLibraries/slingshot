@@ -122,9 +122,14 @@ def publish(bags, metadata, workspace, datastore, public, secure,
         else None
     s = Solr(solr, solr_auth)
     gs = GeoServer(public=public, secure=secure, auth=gs_auth)
-    for b in os.listdir(bags):
+    if os.path.isfile(os.path.join(bags, 'bag-info.txt')):
+        _bags = [bags]
+    else:
+        _bags = [os.path.join(bags, d) for d in os.listdir(bags)]
+
+    for b in _bags:
         try:
-            bag = load_bag(os.path.join(bags, b))
+            bag = load_bag(b)
             metadata_path = os.path.join(metadata, bag.name + '.xml')
             # Assume the layer is already published if metadata file exists
             if os.path.isfile(metadata_path):
