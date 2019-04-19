@@ -13,7 +13,7 @@ TYPES = ('Dataset', 'Image', 'Physical Object')
 GEOMS = ('Point', 'Line', 'Polygon', 'Image', 'Raster', 'Mixed')
 
 env_regex = re.compile(
-    "ENVELOPE\({}, {}, {}, {}\)".format(*repeat("[+-]?\d+(\.\d+)?", 4)))
+    r"ENVELOPE\({}, {}, {}, {}\)".format(*repeat(r"[+-]?\d+(\.\d+)?", 4)))
 Field = partial(attr.ib, default=None)
 _set = converters.optional(set)
 
@@ -121,10 +121,13 @@ class Record:
     geoblacklight_version = Field(default='1.0')
 
     @classmethod
-    def from_file(cls, path):
-        """Create a record from the given JSON file."""
-        with open(path, encoding='utf-8') as fp:
-            record = json.load(fp)
+    def from_file(cls, fp):
+        """Create a record from the given file-like object."""
+        return cls.from_str(fp.read().decode('utf-8'))
+
+    @classmethod
+    def from_str(cls, s):
+        record = json.loads(s)
         for k, v in record.items():
             if k == 'dct_references_s':
                 record[k] = json.loads(v)

@@ -1,10 +1,11 @@
+from decimal import Decimal, getcontext
+import re
 try:
     from lxml.etree import iterparse
 except ImportError:
     from xml.etree.ElementTree import iterparse
+
 import pymarc
-import re
-from decimal import Decimal, getcontext
 
 
 DC_FORMAT_S = {
@@ -17,10 +18,11 @@ DC_FORMAT_S = {
 class XMLParser(object):
     """Base streaming XML parser for iterating over records.
 
-    A subclass must implement ``start_handler`` and ``end_handler`` methods that
-    accept an Element. The subclass must also provide an attribute called
+    A subclass must implement ``start_handler`` and ``end_handler`` methods
+    that accept an Element. The subclass must also provide an attribute called
     ``record_elem`` that specifies the element name for a record. This is a
-    namespace aware parser, so make sure to include the namespace if one exists.
+    namespace aware parser, so make sure to include the namespace if one
+    exists.
 
     :param fstream: file name or file object
     :returns: record generator
@@ -73,7 +75,8 @@ class MarcParser(XMLParser):
             ind2 = elem.get('ind2')
             self._field = pymarc.Field(tag, indicators=[ind1, ind2])
         elif elem.tag == '{%s}controlfield' % self.MARC_NS:
-            if elem.get('tag').isdigit():  # skip controlfields that are letters
+            # skip controlfields that are letters
+            if elem.get('tag').isdigit():
                 self._field = pymarc.Field(elem.get('tag'))
 
     def end_handler(self, elem):
@@ -133,7 +136,8 @@ class MarcParser(XMLParser):
         dec = Decimal(parts.get('degrees')) + \
             Decimal(parts.get('minutes') or 0) / 60 + \
             Decimal(parts.get('seconds') or 0) / 3600
-        if parts.get('hemisphere') and parts.get('hemisphere').lower() in 'ws-':
+        if parts.get('hemisphere') and \
+           parts.get('hemisphere').lower() in 'ws-':
             dec = dec * -1
         getcontext().prec = o_precision
         return dec

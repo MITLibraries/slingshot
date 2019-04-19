@@ -3,32 +3,51 @@ notifications:
 language: python
 services:
     - postgresql
+dist: xenial
+python:
+  - "3.7"
 
 ## This is necessary because of https://github.com/travis-ci/travis-ci/issues/6972
 addons:
     postgresql: 9.6
     apt:
         packages:
-            postgresql-9.6-postgis-2.3
-##
+            postgresql-9.6-postgis-2.4
 
+##
+# moto has a problem with credentials (https://github.com/spulec/moto/issues/1924)
+# and the solution is to just set the AWS creds to anything. They will have
+# to be set individually for each environment in the job matrix that runs
+# tests (i.e. py37 and coveralls) rather than globally because they would
+# overwrite the real AWS creds set through the Travis UI. Those will be
+# needed for deployment.
+##
 env:
   global:
-    POSTGIS_DB="postgresql://postgres@localhost/slingshot_test"
+    PG_DATABASE="postgresql://postgres@localhost/slingshot_test"
 matrix:
   include:
-    - python: 3.6
-      env: TOX_ENV=py36-integration
-    - python: 3.6
+    - python: 3.7
+      env:
+        - TOX_ENV=py37
+        - AWS_SECRET_ACCESS_KEY=secret
+        - AWS_ACCESS_KEY_ID=key
+    - python: 3.7
       env: TOX_ENV=flake8
-    - python: 3.6
+    - python: 3.7
       env: TOX_ENV=safety
-    - python: 3.6
-      env: TOX_ENV=coveralls
+    - python: 3.7
+      env:
+        - TOX_ENV=coveralls
+        - AWS_SECRET_ACCESS_KEY=secret
+        - AWS_ACCESS_KEY_ID=key
 before_script:
     - psql -U postgres -c "CREATE DATABASE slingshot_test;"
     - psql -U postgres -d slingshot_test -c "CREATE EXTENSION postgis;"
     - psql -U postgres -d slingshot_test -c "CREATE SCHEMA geodata;"
+before_install:
+  ## This is necessary because of https://github.com/travis-ci/travis-ci/issues/7940
+  - sudo rm -f /etc/boto.cfg
 install:
   - pip install tox
 script:

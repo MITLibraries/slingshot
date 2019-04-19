@@ -1,5 +1,8 @@
+import re
+
 from geoalchemy2 import Geometry
 from geomet import wkt
+from shapefile import Reader
 from sqlalchemy import (
     Boolean,
     Column,
@@ -13,7 +16,17 @@ from sqlalchemy import (
 )
 
 
-class Engine(object):
+GEOM_TYPES = {
+    1: 'POINT',
+    3: 'LINESTRING',
+    5: 'POLYGON',
+    8: 'MULTIPOINT',
+}
+
+quote = re.compile(r'(\t|\n|\r|\\.)')
+
+
+class Engine:
     _engine = None
 
     def __call__(self):
@@ -71,10 +84,7 @@ def prep_field(field, _type, encoding):
     if _type == 'C':
         if type(field) is bytes:
             field = field.decode(encoding)
-        quotable = ('\\', u'\t', u'\n', u'\r', u'\.')
-        for q in quotable:
-            field = field.replace(q, u'\\' + q)
-        return field
+        return quote.sub(r'\\\1', field)
     return str(field)
 
 
@@ -98,7 +108,7 @@ def multiply(geometry):
     return geometry
 
 
-class PGShapeReader(object):
+class PGShapeReader:
     """Implements file-like interface to shapefile for PG COPY command.
 
     A ``PGShapeReader`` provides a streaming interface to a Shapefile for
@@ -147,3 +157,26 @@ class PGShapeReader(object):
         fields = [prep_field(f, f_type, self.encoding) for f, f_type in
                   zip(record.record, self._f_types)] + [geom]
         return u'\t'.join(fields) + u'\n'
+
+
+def load_layer(layer):
+    """Load the layer into PostGIS."""
+    srid = layer.srid
+    with Reader(shp=layer.shp, dbf=layer.dbf) as sf:
+        geom_type = GEOM_TYPES[sf.shapeType]
+        fields = sf.fields[1:]
+        t = table(layer.name, geom_type, srid, fields)
+        if t.exists():
+            raise Exception('Table {} already exists'.format(layer.name))
+        t.create()
+        try:
+            with engine().begin() as conn:
+                reader = PGShapeReader(sf, srid, layer.encoding)
+                cursor = conn.connection.cursor()
+                cursor.copy_from(reader, table_name(t))
+            with engine().connect() as conn:
+                conn.execute('CREATE INDEX "idx_{}_geom" ON {} USING GIST '
+                             '(geom)'.format(layer.name, table_name(t)))
+        except Exception:
+            t.drop()
+            raise
