@@ -6,22 +6,15 @@ GIS data workflow.
 """
 
 from setuptools import find_packages, setup
-import subprocess
 
 
 with open('LICENSE') as f:
     license = f.read()
 
-try:
-    output = subprocess.run(['git', 'describe', '--always'],
-                            stdout=subprocess.PIPE, encoding='utf-8')
-    version = output.stdout.strip()
-except subprocess.CalledProcessError:
-    version = 'unknown'
 
 setup(
     name='slingshot',
-    version='1.0.0-' + version,
+    version='1.0.0',
     description='GIS data workflow',
     long_description=__doc__,
     url='https://github.com/MITLibraries/slingshot',

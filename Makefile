@@ -1,4 +1,4 @@
-.PHONY: clean install wheel test tests update
+.PHONY: clean install dist test tests update
 SHELL=/bin/bash
 
 
@@ -15,8 +15,8 @@ clean: ## Remove build artifacts
 install: ## Install project and dev depenedencies
 	pipenv install --dev
 
-wheel: ## Build Python wheel
-	pipenv run python setup.py bdist_wheel
+dist: ## Build docker container
+	docker build -t slingshot .
 
 test: ## Run tests
 	tox
