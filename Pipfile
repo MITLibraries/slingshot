@@ -1,12 +1,11 @@
 [[source]]
-
 verify_ssl = true
 url = "https://pypi.python.org/simple"
 
+[requires]
+python_version = "3.7"
 
 [packages]
-
-bagit = "*"
 click = "*"
 geomet = "*"
 "psycopg2-binary" = "*"
@@ -16,12 +15,11 @@ requests = "*"
 plyplus = "*"
 attrs = "*"
 pymarc = "*"
-
+boto3 = "*"
 
 [dev-packages]
-
-bumpversion = "*"
 coveralls = "*"
 pytest = "*"
 pytest-cov = "*"
 requests-mock = "*"
+moto = "*"

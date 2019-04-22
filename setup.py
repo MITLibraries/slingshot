@@ -2,25 +2,27 @@
 Slingshot
 =========
 
-Create and submit bags to kepler.
+GIS data workflow.
 """
 
-import io
-import re
 from setuptools import find_packages, setup
+import subprocess
 
 
-with io.open('LICENSE') as f:
+with open('LICENSE') as f:
     license = f.read()
 
-with io.open('slingshot/__init__.py', 'r') as fp:
-    version = re.search(r'^__version__\s*=\s*[\'"]([^\'"]*)[\'"]', fp.read(),
-                        re.MULTILINE).group(1)
+try:
+    output = subprocess.run(['git', 'describe', '--always'],
+                            stdout=subprocess.PIPE, encoding='utf-8')
+    version = output.stdout.strip()
+except subprocess.CalledProcessError:
+    version = 'unknown'
 
 setup(
     name='slingshot',
-    version=version,
-    description='Create and submit bags',
+    version='1.0.0-' + version,
+    description='GIS data workflow',
     long_description=__doc__,
     url='https://github.com/MITLibraries/slingshot',
     license=license,
@@ -29,7 +31,7 @@ setup(
     packages=find_packages(exclude=['tests']),
     install_requires=[
         'attrs',
-        'bagit',
+        'boto3',
         'click',
         'geoalchemy2',
         'geomet',
@@ -39,6 +41,7 @@ setup(
         'pyshp',
         'requests',
     ],
+    python_requires='>=3.7',
     setup_requires=[
         'pytest-runner',
     ],
@@ -56,10 +59,7 @@ setup(
         'Intended Audience :: Developers',
         'Environment :: Console',
         'License :: OSI Approved :: Apache Software License',
-        'Programming Language :: Python :: 2',
-        'Programming Language :: Python :: 2.7',
         'Programming Language :: Python :: 3',
-        'Programming Language :: Python :: 3.4',
-        'Programming Language :: Python :: 3.5',
+        'Programming Language :: Python :: 3.7',
     ]
 )

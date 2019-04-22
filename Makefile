@@ -1,28 +1,28 @@
-.PHONY: all clean install release test tests update
+.PHONY: clean install wheel test tests update
 SHELL=/bin/bash
-RELEASE_TYPE=patch
 
-all: test
 
-clean:
+help: ## Print this message
+	@awk 'BEGIN { FS = ":.*##"; print "Usage:  make <target>\n\nTargets:" } \
+/^[-_[:alpha:]]+:.?*##/ { printf "  %-15s%s\n", $$1, $$2 }' $(MAKEFILE_LIST)
+
+
+clean: ## Remove build artifacts
 	find . -name "*.pyc" -print0 | xargs -0 rm -f
 	find . -name '__pycache__' -print0 | xargs -0 rm -rf
 	rm -rf .coverage .tox *.egg-info .eggs build dist
 
-install:
-	pip install .
+install: ## Install project and dev depenedencies
+	pipenv install --dev
 
-release:
-	pipenv run bumpversion $(RELEASE_TYPE)
-	@tput setaf 2
-	@echo Built release for `git describe --tag`. Make sure to run:
-	@echo "  $$ git push origin `git rev-parse --abbrev-ref HEAD` tag `git describe --tag`"
-	@tput sgr0
+wheel: ## Build Python wheel
+	pipenv run python setup.py bdist_wheel
 
-test:
+test: ## Run tests
 	tox
 
 tests: test
 
-update:
+update: ## Update all Python dependencies
+	pipenv clean
 	pipenv update --dev

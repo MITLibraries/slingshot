@@ -1,18 +1,19 @@
 import os
-import shutil
-import tempfile
 
+import boto3
+from moto import mock_s3
 import pytest
 
+from slingshot.layer import Shapefile
 
-@pytest.yield_fixture(scope="session", autouse=True)
-def reset_temp_dir():
-    cur_dir = os.path.dirname(os.path.realpath(__file__))
-    tmp = tempfile.mkdtemp(dir=cur_dir)
-    tempfile.tempdir = tmp
-    yield
-    if os.path.isdir(tmp):
-        shutil.rmtree(tmp)
+
+@pytest.fixture
+def s3():
+    with mock_s3():
+        conn = boto3.resource("s3")
+        conn.create_bucket(Bucket="upload")
+        conn.create_bucket(Bucket="store")
+        yield conn
 
 
 @pytest.fixture
@@ -21,46 +22,27 @@ def shapefile():
 
 
 @pytest.fixture
-def shapefile_unpacked():
-    d = os.path.join(tempfile.mkdtemp(), 'bermuda')
-    b = _data_file('fixtures/bermuda_unpacked')
-    shutil.copytree(b, d)
-    return d
+def geotiff():
+    return _data_file('fixtures/france.zip')
 
 
 @pytest.fixture
-def no_xml():
-    return _data_file('fixtures/no_xml.zip')
+def shapefile_layer():
+    return _data_file('fixtures/bermuda')
 
 
 @pytest.fixture
-def no_shp():
-    return _data_file('fixtures/no_shp.zip')
+def shapefile_stored(s3, shapefile_layer):
+    bucket = s3.Bucket("store")
+    for f in os.listdir(shapefile_layer):
+        bucket.upload_file(os.path.join(shapefile_layer, f),
+                           os.path.join("bermuda", f))
+    return "store", "bermuda"
 
 
 @pytest.fixture
-def bag():
-    d = os.path.join(tempfile.mkdtemp(), 'bermuda')
-    b = _data_file('fixtures/bags/bermuda')
-    shutil.copytree(b, d)
-    return d
-
-
-@pytest.fixture
-def bags_dir():
-    d = os.path.join(tempfile.mkdtemp(), 'bags')
-    shutil.copytree(_data_file('fixtures/bags'), d)
-    return d
-
-
-@pytest.fixture
-def meta_dir():
-    return tempfile.mkdtemp()
-
-
-@pytest.fixture
-def tiff_store():
-    return tempfile.mkdtemp()
+def shapefile_object(shapefile_stored):
+    return Shapefile(*shapefile_stored)
 
 
 @pytest.fixture
@@ -71,11 +53,6 @@ def prj_4326():
 @pytest.fixture
 def prj_2249():
     return _data_file('fixtures/2249.prj')
-
-
-@pytest.fixture
-def fgdc():
-    return _data_file('fixtures/bermuda/data/bermuda.xml')
 
 
 def _data_file(name):
