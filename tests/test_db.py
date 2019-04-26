@@ -16,7 +16,8 @@ from slingshot.db import (
 
 @pytest.fixture(autouse=True)
 def reset_metadata():
-    metadata.clear()
+    metadata.configure(schema='public')
+    metadata().clear()
 
 
 def test_table_converts_to_multi_geom_type():

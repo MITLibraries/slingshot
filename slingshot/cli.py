@@ -19,19 +19,20 @@ def main():
 @click.argument('key')
 @click.argument('dest')
 @click.option('--db-uri', envvar='PG_DATABASE')
+@click.option('--db-schema', envvar='PG_SCHEMA', default='public')
 @click.option('--geoserver', envvar='GEOSERVER')
 @click.option('--geoserver-user', envvar='GEOSERVER_USER')
 @click.option('--geoserver-password', envvar='GEOSERVER_PASSWORD')
 @click.option('--solr', envvar='SOLR')
 @click.option('--solr-user', envvar='SOLR_USER')
 @click.option('--solr-password', envvar='SOLR_PASSWORD')
-def publish(bucket, key, dest, db_uri, geoserver, geoserver_user,
+def publish(bucket, key, dest, db_uri, db_schema, geoserver, geoserver_user,
             geoserver_password, solr, solr_user, solr_password):
     geo_auth = (geoserver_user, geoserver_password) if geoserver_user and \
         geoserver_password else None
     solr_auth = (solr_user, solr_password) if solr_user and solr_password \
         else None
-    engine.configure(db_uri)
+    engine.configure(db_uri, db_schema)
     geo_svc = GeoServer(geoserver, auth=geo_auth)
     solr_svc = Solr(solr, auth=solr_auth)
     layer = create_layer(*unpack_zip(bucket, key, dest))

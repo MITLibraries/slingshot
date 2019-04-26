@@ -16,31 +16,38 @@ def runner():
 @pytest.fixture
 def db():
     uri = os.environ['PG_DATABASE']
-    engine.configure(uri)
-    if engine().has_table('bermuda', schema='geodata'):
+    schema = os.environ.get('PG_SCHEMA', 'public')
+    engine.configure(uri, schema)
+    if engine().has_table('bermuda', schema=schema):
         with engine().connect() as conn:
-            conn.execute("DROP TABLE geodata.bermuda")
-    metadata.clear()
-    return engine
+            conn.execute("DROP TABLE {}.bermuda".format(schema))
+    metadata().clear()
+    yield engine
+    if engine().has_table('bermuda', schema=schema):
+        with engine().connect() as conn:
+            conn.execute("DROP TABLE {}.bermuda".format(schema))
 
 
 @pytest.mark.integration
 def test_publishes_shapefile(db, runner, shapefile, s3):
     bucket = s3.Bucket("upload")
     bucket.upload_file(shapefile, "bermuda.zip")
-    uri = os.environ['PG_DATABASE']
+    uri = db().url
+    schema = metadata().schema
     with requests_mock.Mocker() as m:
         m.post("mock://example.com/geoserver/rest/workspaces/public/"
                "datastores/pg/featuretypes")
         m.post("mock://example.com/solr/update/json/docs")
         res = runner.invoke(main, ['publish', 'upload', 'bermuda.zip',
-                                   'store', '--db-uri', uri, '--geoserver',
+                                   'store', '--db-uri', uri, '--db-schema',
+                                   schema, '--geoserver',
                                    'mock://example.com/geoserver/',
                                    '--solr', 'mock://example.com/solr'])
     assert res.exit_code == 0
     assert "Published bermuda" in res.output
     with db().connect() as conn:
-        r = conn.execute('SELECT COUNT(*) FROM geodata.bermuda').scalar()
+        r = conn.execute('SELECT COUNT(*) FROM {}.bermuda'.format(schema)) \
+            .scalar()
         assert r == 713
 
 
