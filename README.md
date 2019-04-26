@@ -37,6 +37,8 @@ You can quickly set up a PostGIS database with docker:
 $ docker run -p 5432:5432 mdillon/postgis
 ```
 
+You should also consider adding the `AWS_ACCESS_KEY_ID` and `AWS_SECRET_ACCESS_KEY` to your `.env` file and set these to any dummy value. While this is not strictly necessary, it will help prevent you from accidentally using your real AWS credentials during testing/development.
+
 Use [Tox](https://tox.readthedocs.io/en/latest/) to run the tests. You can see which environments are configured to run by default with:
 
 ```bash
