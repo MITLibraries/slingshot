@@ -34,7 +34,7 @@ setup(
         'pyshp',
         'requests',
     ],
-    python_requires='>=3.7',
+    python_requires='>=3.7.1',
     setup_requires=[
         'pytest-runner',
     ],
