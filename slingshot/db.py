@@ -32,13 +32,24 @@ class Engine:
     def __call__(self):
         return self._engine
 
-    def configure(self, url):
+    def configure(self, url, schema=None):
         self._engine = self._engine or create_engine(url)
-        metadata.bind = self._engine
+        metadata.configure(schema=schema)
+        metadata().bind = self._engine
+
+
+class Metadata:
+    _metadata = None
+
+    def __call__(self):
+        return self._metadata
+
+    def configure(self, **kwargs):
+        self._metadata = self._metadata or MetaData(**kwargs)
 
 
 engine = Engine()
-metadata = MetaData(schema='geodata')
+metadata = Metadata()
 
 
 def table(name, gtype, srid, fields):
@@ -49,7 +60,7 @@ def table(name, gtype, srid, fields):
     elif gtype == 'LINESTRING':
         gtype = 'MULTILINESTRING'
     cols.append(Column('geom', Geometry(gtype, srid, spatial_index=False)))
-    return Table(name, metadata, *cols)
+    return Table(name, metadata(), *cols)
 
 
 def table_name(table):
