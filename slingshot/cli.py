@@ -1,5 +1,6 @@
 import click
 
+from slingshot import PUBLIC_WORKSPACE, RESTRICTED_WORKSPACE, DATASTORE
 from slingshot.app import (create_record, GeoServer, make_slug, Solr,
                            unpack_zip,)
 from slingshot.db import engine, load_layer
@@ -12,6 +13,56 @@ from slingshot.record import Record
 @click.version_option()
 def main():
     pass
+
+
+@main.command()
+@click.option('--geoserver', envvar='GEOSERVER',
+              help="Base URL for GeoServer instance")
+@click.option('--geoserver-user', envvar='GEOSERVER_USER',
+              help="GeoServer username")
+@click.option('--geoserver-password', envvar='GEOSERVER_PASSWORD',
+              help="GeoServer password")
+@click.option('--db-host', default="localhost", help="PostGIS hostname")
+@click.option('--db-port', default="5432", help="PostGIS port")
+@click.option('--db-database', default="postgres",
+              help="PostGIS database name")
+@click.option('--db-schema', default="public", help="PostGIS schema")
+@click.option('--db-user', default="postgres", help="PostGIS user")
+@click.option('--db-password', envvar='PG_PASSWORD', default="",
+              help="PostGIS password")
+def initialize(geoserver, geoserver_user, geoserver_password, db_host, db_port,
+               db_database, db_schema, db_user, db_password):
+    """Initialize a GeoServer instance.
+
+    This command will create the workspaces and datastores the are needed
+    for loading data into GeoServer.
+    """
+    datastore = {
+        "dataStore": {
+            "name": DATASTORE,
+            "connectionParameters": {
+                "entry": [
+                    {"@key": "host", "$": db_host},
+                    {"@key": "port", "$": db_port},
+                    {"@key": "database", "$": db_database},
+                    {"@key": "schema", "$": db_schema},
+                    {"@key": "user", "$": db_user},
+                    {"@key": "password", "$": db_password},
+                    {"@key": "dbtype", "$": "postgis"}
+                ]
+            }
+        }
+    }
+    geo_auth = (geoserver_user, geoserver_password) if geoserver_user and \
+        geoserver_password else None
+    geo = GeoServer(geoserver, auth=geo_auth)
+    geo.post("/workspaces", json={"workspace": {"name": PUBLIC_WORKSPACE}})
+    geo.post("/workspaces", json={"workspace": {"name": RESTRICTED_WORKSPACE}})
+    geo.post("/workspaces/{}/datastores".format(PUBLIC_WORKSPACE),
+             json=datastore)
+    geo.post("/workspaces/{}/datastores".format(RESTRICTED_WORKSPACE),
+             json=datastore)
+    click.echo("GeoServer initialized")
 
 
 @main.command()

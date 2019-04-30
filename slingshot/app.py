@@ -68,12 +68,12 @@ def create_record(layer, geoserver):
 
 class GeoServer:
     def __init__(self, url, auth=None):
-        self.url = url.rstrip("/")
+        self.url = "{}/rest".format(url.rstrip("/"))
         self.auth = auth
         self.session = requests.Session()
         self.session.auth = auth
 
-    def post(self, url, **kwargs):
+    def post(self, path, **kwargs):
         """Make a post request to the GeoServer instance.
 
         Note the use of ``stream=False`` here. This ensures the session pool
@@ -81,6 +81,7 @@ class GeoServer:
         shouldn't be a problem as none of the responses received here will be
         very large.
         """
+        url = "{}/{}".format(self.url, path.lstrip("/"))
         r = self.session.post(url, stream=False, **kwargs)
         r.raise_for_status()
         return r
@@ -111,8 +112,7 @@ class GeoServer:
                 "workspace": {"name": workspace},
             }
         }
-        url = "{}/rest/workspaces/{}/coveragestores".format(self.url,
-                                                            workspace)
+        url = "/workspaces/{}/coveragestores".format(workspace)
         self.post(url, json=data)
         data = {
             "coverage": {
@@ -129,16 +129,16 @@ class GeoServer:
                 }
             }
         }
-        url = "{}/rest/workspaces/{}/coveragestores/{}/coverages".format(
-                    self.url, workspace, layer.name)
+        url = "/workspaces/{}/coveragestores/{}/coverages".format(workspace,
+                                                                  layer.name)
         self.post(url, json=data)
 
     def _add_feature(self, layer):
         workspace = PUBLIC_WORKSPACE if layer.is_public() else \
             RESTRICTED_WORKSPACE
         data = {"featureType": {"name": layer.name}}
-        url = "{}/rest/workspaces/{}/datastores/{}/featuretypes".format(
-                    self.url, workspace, DATASTORE)
+        url = "/workspaces/{}/datastores/{}/featuretypes".format(workspace,
+                                                                 DATASTORE)
         self.post(url, json=data)
 
 

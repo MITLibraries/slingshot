@@ -67,3 +67,17 @@ def test_publishes_geotiff(runner, geotiff, s3):
                                    '--solr', 'mock://example.com/solr'])
         assert res.exit_code == 0
         assert 'Published france' in res.output
+
+
+@pytest.mark.integration
+def test_initializes_geoserver(runner):
+    with requests_mock.Mocker() as m:
+        m.post('mock://example.com/geoserver/rest/workspaces')
+        m.post('mock://example.com/geoserver/rest/workspaces/public'
+               '/datastores')
+        m.post('mock://example.com/geoserver/rest/workspaces/secure'
+               '/datastores')
+        res = runner.invoke(main, ['initialize', '--geoserver',
+                                   'mock://example.com/geoserver'])
+        assert res.exit_code == 0
+        assert m.call_count == 4
