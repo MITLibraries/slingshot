@@ -160,12 +160,14 @@ class Solr(object):
         self.session.auth = auth
 
     def post(self, path, **kwargs):
-        url = "{}/{}".format(self.url, path)
+        url = "{}/{}".format(self.url, path.lstrip("/"))
         r = self.session.post(url, stream=False, **kwargs)
         r.raise_for_status()
+        return r
 
-    def add(self, record):
-        self.post('update/json/docs', json=record)
+    def add(self, record, soft_commit=True):
+        params = {"softCommit": "true"} if soft_commit else None
+        self.post('update/json/docs', params=params, json=record)
 
     def delete(self, query='dct_provenance_s:MIT'):
         self.post('update', json={'delete': {'query': query}})
