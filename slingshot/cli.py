@@ -26,8 +26,11 @@ def main():
 @click.option('--solr', envvar='SOLR')
 @click.option('--solr-user', envvar='SOLR_USER')
 @click.option('--solr-password', envvar='SOLR_PASSWORD')
+@click.option('--s3-endpoint')
+@click.option('--s3-alias')
 def publish(bucket, key, dest, db_uri, db_schema, geoserver, geoserver_user,
-            geoserver_password, solr, solr_user, solr_password):
+            geoserver_password, solr, solr_user, solr_password, s3_endpoint,
+            s3_alias):
     geo_auth = (geoserver_user, geoserver_password) if geoserver_user and \
         geoserver_password else None
     solr_auth = (solr_user, solr_password) if solr_user and solr_password \
@@ -35,11 +38,12 @@ def publish(bucket, key, dest, db_uri, db_schema, geoserver, geoserver_user,
     engine.configure(db_uri, db_schema)
     geo_svc = GeoServer(geoserver, auth=geo_auth)
     solr_svc = Solr(solr, auth=solr_auth)
-    layer = create_layer(*unpack_zip(bucket, key, dest))
+    layer = create_layer(*(unpack_zip(bucket, key, dest, s3_endpoint)),
+                         s3_endpoint)
     layer.record = create_record(layer, geoserver)
     if layer.format == "Shapefile":
         load_layer(layer)
-    geo_svc.add(layer)
+    geo_svc.add(layer, s3_alias)
     solr_svc.add(layer.record.as_dict())
     click.echo("Published {}".format(layer.name))
 

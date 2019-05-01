@@ -23,10 +23,11 @@ class S3Layer:
     in the bucket. At minimum, a layer should have an FGDC XML file and the
     necessary data files.
     """
-    def __init__(self, bucket, key):
-        self.s3 = boto3.resource('s3')
+    def __init__(self, bucket, key, endpoint=None):
+        self.s3 = boto3.resource('s3', endpoint_url=endpoint)
         self.bucket = bucket
         self.key = key
+        self.endpoint = endpoint
         self._record = None
 
     @property
@@ -163,19 +164,19 @@ class Shapefile(S3Layer):
         return int(srid.strip('"'))
 
 
-def create_layer(bucket, key):
+def create_layer(bucket, key, endpoint=None):
     """Create a new S3Layer object.
 
     Factory function that creates a new :class:`slingshot.s3.S3Layer` based
     on the given bucket and key.
     """
-    s3 = boto3.resource('s3')
+    s3 = boto3.resource('s3', endpoint_url=endpoint)
     bkt = s3.Bucket(bucket)
     for item in bkt.objects.filter(Prefix=key):
         if item.key.endswith('.shp'):
-            return Shapefile(bucket, key)
+            return Shapefile(bucket, key, endpoint)
         elif item.key.endswith('.tif') or item.key.endswith('.tiff'):
-            return GeoTiff(bucket, key)
+            return GeoTiff(bucket, key, endpoint)
     raise PackageError("Unknown layer type for object s3://{}/{}".format(
                        bucket, key))
 

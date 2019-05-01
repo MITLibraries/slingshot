@@ -16,7 +16,7 @@ from slingshot.s3 import S3IO
 SUPPORTED_EXT = ('.shp', '.tif', '.tiff')
 
 
-def unpack_zip(src_bucket, key, dest_bucket):
+def unpack_zip(src_bucket, key, dest_bucket, endpoint=None):
     """Extract contents of s3://<src_bucket>/<key> into destination bucket.
 
     The uploaded zipfile contains both metadata and data and the structure
@@ -26,7 +26,7 @@ def unpack_zip(src_bucket, key, dest_bucket):
     uploaded zipfile are removed leaving a flattened structure in the new
     object.
     """
-    s3 = boto3.resource('s3')
+    s3 = boto3.resource('s3', endpoint_url=endpoint)
     name = os.path.splitext(key)[0]
     obj = S3IO(s3.Object(src_bucket, key))
     bucket = s3.Bucket(dest_bucket)
@@ -85,7 +85,7 @@ class GeoServer:
         r.raise_for_status()
         return r
 
-    def add(self, layer):
+    def add(self, layer, s3_alias="s3"):
         """Add the layer to GeoServer.
 
         In the case of of a Shapefile, the layer should already exist in the
@@ -95,11 +95,11 @@ class GeoServer:
         if layer.format == 'Shapefile':
             self._add_feature(layer)
         elif layer.format == 'GeoTiff':
-            self._add_coverage(layer)
+            self._add_coverage(layer, s3_alias)
         else:
             raise Exception("Unknown format")
 
-    def _add_coverage(self, layer):
+    def _add_coverage(self, layer, s3_alias):
         workspace = PUBLIC_WORKSPACE if layer.is_public() else \
             RESTRICTED_WORKSPACE
         data = {
@@ -107,7 +107,7 @@ class GeoServer:
                 "name": layer.name,
                 "type": "S3GeoTiff",
                 "enabled": True,
-                "url": "s3://{}/{}".format(layer.bucket, layer.tif),
+                "url": "{}://{}/{}".format(s3_alias, layer.bucket, layer.tif),
                 "workspace": {"name": workspace},
             }
         }
