@@ -23,3 +23,6 @@ pytest = "*"
 pytest-cov = "*"
 requests-mock = "*"
 moto = "*"
+
+[scripts]
+slingshot = "python -c \"from slingshot.cli import main; main()\""

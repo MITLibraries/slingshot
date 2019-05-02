@@ -4,13 +4,13 @@ This application provides workflow for spatial data. It will load a zipped layer
 
 ## Installation
 
-The easiest way to get started is to build the docker container and run that:
+The easiest way to get started is to install using Pipenv:
 
 ```bash
 $ git clone git@github.com:MITLibraries/slingshot.git
 $ cd slingshot
-$ docker build -t slingshot .
-$ docker run --rm slingshot
+$ pipenv install
+$ pipenv run slingshot
 ```
 
 ## Development
