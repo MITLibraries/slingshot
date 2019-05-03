@@ -10,6 +10,8 @@ from slingshot.db import engine, metadata
 
 @pytest.fixture
 def runner():
+    if 'S3_ENDPOINT' in os.environ:
+        del os.environ['S3_ENDPOINT']
     return CliRunner()
 
 
