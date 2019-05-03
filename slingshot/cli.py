@@ -69,19 +69,42 @@ def initialize(geoserver, geoserver_user, geoserver_password, db_host, db_port,
 @click.argument('bucket')
 @click.argument('key')
 @click.argument('dest')
-@click.option('--db-uri', envvar='PG_DATABASE')
-@click.option('--db-schema', envvar='PG_SCHEMA', default='public')
-@click.option('--geoserver', envvar='GEOSERVER')
-@click.option('--geoserver-user', envvar='GEOSERVER_USER')
-@click.option('--geoserver-password', envvar='GEOSERVER_PASSWORD')
-@click.option('--solr', envvar='SOLR')
-@click.option('--solr-user', envvar='SOLR_USER')
-@click.option('--solr-password', envvar='SOLR_PASSWORD')
-@click.option('--s3-endpoint')
-@click.option('--s3-alias')
+@click.option('--db-uri', envvar='PG_DATABASE',
+              help="SQLAlchemy PostGIS URL "
+                   "Ex: postgresql://user:password@host:5432/dbname")
+@click.option('--db-schema', envvar='PG_SCHEMA', default='public',
+              help="PostGres schema name. Default value: public")
+@click.option('--geoserver', envvar='GEOSERVER', help="Base Geoserver ULR")
+@click.option('--geoserver-user', envvar='GEOSERVER_USER',
+              help="GeoServer user")
+@click.option('--geoserver-password', envvar='GEOSERVER_PASSWORD',
+              help="GeoServer password")
+@click.option('--solr', envvar='SOLR',
+              help="Solr URL. Make sure to include the core name.")
+@click.option('--solr-user', envvar='SOLR_USER', help="Solr user")
+@click.option('--solr-password', envvar='SOLR_PASSWORD', help="Solr password")
+@click.option('--s3-endpoint', envvar='S3_ENDPOINT',
+              help="If using an alternative S3 service like Minio, set this "
+                   "to the base URL for that service")
+@click.option('--s3-alias', envvar='S3_ALIAS',
+              help="The GeoServer S3 plugin requires a different alias (which "
+                   "appears as the protocol) for alternative S3 services, for "
+                   "example: minio://bucket/key. See https://docs.geoserver.org/latest/en/user/community/s3-geotiff/index.html "  # noqa: E501
+                   "for more information.")
 def publish(bucket, key, dest, db_uri, db_schema, geoserver, geoserver_user,
             geoserver_password, solr, solr_user, solr_password, s3_endpoint,
             s3_alias):
+    """Publish layer at s3://BUCKET/KEY
+
+    This will publish the uploaded zipfile layer named KEY in the S3 bucket
+    named BUCKET. The unpacked, processed layer will be stored in a new
+    directory named after the layer in the DEST bucket.
+
+    The initial zipfile should contain the necessary data files and an
+    fgdc.xml file. The unpacked zipfile will be flattened (any subdirectories
+    removed) and a geoblacklight.json file containing the GeoBlacklight
+    record will be added.
+    """
     geo_auth = (geoserver_user, geoserver_password) if geoserver_user and \
         geoserver_password else None
     solr_auth = (solr_user, solr_password) if solr_user and solr_password \
