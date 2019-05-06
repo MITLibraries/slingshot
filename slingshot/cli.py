@@ -62,6 +62,10 @@ def initialize(geoserver, geoserver_user, geoserver_password, db_host, db_port,
              json=datastore)
     geo.post("/workspaces/{}/datastores".format(RESTRICTED_WORKSPACE),
              json=datastore)
+    geo.post("/security/acl/layers",
+             json={"{}.*.r".format(PUBLIC_WORKSPACE): "ROLE_ANONYMOUS",
+                   "{}.*.r".format(RESTRICTED_WORKSPACE): "ADMIN"})
+    geo.put("/security/acl/layers", json={"*.*.r": "ADMIN"})
     click.echo("GeoServer initialized")
 
 

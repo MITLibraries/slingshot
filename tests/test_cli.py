@@ -79,7 +79,9 @@ def test_initializes_geoserver(runner):
                '/datastores')
         m.post('mock://example.com/geoserver/rest/workspaces/secure'
                '/datastores')
+        m.post('mock://example.com/geoserver/rest/security/acl/layers')
+        m.put('mock://example.com/geoserver/rest/security/acl/layers')
         res = runner.invoke(main, ['initialize', '--geoserver',
                                    'mock://example.com/geoserver'])
         assert res.exit_code == 0
-        assert m.call_count == 4
+        assert m.call_count == 6
