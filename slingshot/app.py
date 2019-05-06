@@ -73,8 +73,8 @@ class GeoServer:
         self.session = requests.Session()
         self.session.auth = auth
 
-    def post(self, path, **kwargs):
-        """Make a post request to the GeoServer instance.
+    def request(self, method, path, **kwargs):
+        """Make a request.
 
         Note the use of ``stream=False`` here. This ensures the session pool
         still gets used even if the response is not fully read. This
@@ -82,9 +82,15 @@ class GeoServer:
         very large.
         """
         url = "{}/{}".format(self.url, path.lstrip("/"))
-        r = self.session.post(url, stream=False, **kwargs)
+        r = self.session.request(method, url, stream=False, **kwargs)
         r.raise_for_status()
         return r
+
+    def post(self, path, **kwargs):
+        return self.request("POST", path, **kwargs)
+
+    def put(self, path, **kwargs):
+        return self.request("PUT", path, **kwargs)
 
     def add(self, layer, s3_alias="s3"):
         """Add the layer to GeoServer.
