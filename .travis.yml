@@ -1,11 +1,8 @@
-notifications:
-  email: false
 language: python
 services:
     - postgresql
 dist: xenial
-python:
-  - "3.7"
+python: 3.7
 
 ## This is necessary because of https://github.com/travis-ci/travis-ci/issues/6972
 addons:
@@ -24,23 +21,12 @@ addons:
 ##
 env:
   global:
-    PG_DATABASE="postgresql://postgres@localhost/slingshot_test"
-matrix:
-  include:
-    - python: 3.7
-      env:
-        - TOX_ENV=py37
-        - AWS_SECRET_ACCESS_KEY=secret
-        - AWS_ACCESS_KEY_ID=key
-    - python: 3.7
-      env: TOX_ENV=flake8
-    - python: 3.7
-      env: TOX_ENV=safety
-    - python: 3.7
-      env:
-        - TOX_ENV=coveralls
-        - AWS_SECRET_ACCESS_KEY=secret
-        - AWS_ACCESS_KEY_ID=key
+    - PG_DATABASE="postgresql://postgres@localhost/slingshot_test"
+  matrix:
+    - TOX_ENV=flake8
+    - TOX_ENV=safety
+    - TOX_ENV=py37 AWS_SECRET_ACCESS_KEY=secret AWS_ACCESS_KEY_ID=key
+    - TOX_ENV=coveralls AWS_SECRET_ACCESS_KEY=secret AWS_ACCESS_KEY_ID=key
 before_script:
     - psql -U postgres -c "CREATE DATABASE slingshot_test;"
     - psql -U postgres -d slingshot_test -c "CREATE EXTENSION postgis;"
@@ -52,3 +38,15 @@ install:
   - pip install tox
 script:
   - tox -e $TOX_ENV
+jobs:
+  include:
+    - stage: Deploy
+      before_install: skip
+      install: pip install pipenv awscli
+      before_script: skip
+      script: skip
+      before_deploy: make dist
+      deploy:
+        skip_cleanup: true
+        provider: script
+        script: make publish
