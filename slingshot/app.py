@@ -1,5 +1,6 @@
 import base64
 import os
+import threading
 import uuid
 from zipfile import ZipFile
 
@@ -66,12 +67,59 @@ def create_record(layer, geoserver):
     return record
 
 
-class GeoServer:
-    def __init__(self, url, auth=None):
+def make_uuid(value, namespace='mit.edu'):
+    ns = uuid.uuid5(uuid.NAMESPACE_DNS, namespace)
+    return uuid.uuid5(ns, value)
+
+
+def make_slug(name):
+    uid = make_uuid(name)
+    b32 = base64.b32encode(uid.bytes[:8])
+    return 'mit-' + b32.decode('ascii').rstrip('=').lower()
+
+
+class HttpSession:
+    """Threadsafe requests.Session.
+
+    This can be used more or less like the usual requests.Session. The only
+    method it supports is ``request``. For example::
+
+        session = HttpSession()
+        def run():
+            session.request("GET", "https://httpbin.org")
+
+        t = threading.Thread(target=run)
+        t.start()
+
+    """
+    def __init__(self):
+        self._session = threading.local()
+
+    @property
+    def session(self):
+        try:
+            return self._session.s
+        except AttributeError:
+            self._session.s = requests.Session()
+        return self._session.s
+
+    def request(self, method, url, **kwargs):
+        return self.session.request(method, url, **kwargs)
+
+
+class HttpMethodMixin:
+    def post(self, url, **kwargs):
+        return self.request("POST", url, **kwargs)
+
+    def put(self, url, **kwargs):
+        return self.request("PUT", url, **kwargs)
+
+
+class GeoServer(HttpMethodMixin):
+    def __init__(self, url, client, auth=None):
         self.url = "{}/rest".format(url.rstrip("/"))
+        self.client = client
         self.auth = auth
-        self.session = requests.Session()
-        self.session.auth = auth
 
     def request(self, method, path, **kwargs):
         """Make a request.
@@ -81,16 +129,11 @@ class GeoServer:
         shouldn't be a problem as none of the responses received here will be
         very large.
         """
+        kwargs = {"stream": False, "auth": self.auth, **kwargs}
         url = "{}/{}".format(self.url, path.lstrip("/"))
-        r = self.session.request(method, url, stream=False, **kwargs)
+        r = self.client.request(method, url, **kwargs)
         r.raise_for_status()
         return r
-
-    def post(self, path, **kwargs):
-        return self.request("POST", path, **kwargs)
-
-    def put(self, path, **kwargs):
-        return self.request("PUT", path, **kwargs)
 
     def add(self, layer, s3_alias="s3"):
         """Add the layer to GeoServer.
@@ -148,26 +191,16 @@ class GeoServer:
         self.post(url, json=data)
 
 
-def make_uuid(value, namespace='mit.edu'):
-    ns = uuid.uuid5(uuid.NAMESPACE_DNS, namespace)
-    return uuid.uuid5(ns, value)
+class Solr(HttpMethodMixin):
+    def __init__(self, url, client, auth=None):
+        self.url = url.rstrip("/")
+        self.client = client
+        self.auth = auth
 
-
-def make_slug(name):
-    uid = make_uuid(name)
-    b32 = base64.b32encode(uid.bytes[:8])
-    return 'mit-' + b32.decode('ascii').rstrip('=').lower()
-
-
-class Solr(object):
-    def __init__(self, url, auth=None):
-        self.url = url.rstrip('/')
-        self.session = requests.Session()
-        self.session.auth = auth
-
-    def post(self, path, **kwargs):
+    def request(self, method, path, **kwargs):
+        kwargs = {"stream": False, "auth": self.auth, **kwargs}
         url = "{}/{}".format(self.url, path.lstrip("/"))
-        r = self.session.post(url, stream=False, **kwargs)
+        r = self.client.request(method, url, **kwargs)
         r.raise_for_status()
         return r
 

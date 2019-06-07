@@ -1,8 +1,8 @@
 import click
 
 from slingshot import PUBLIC_WORKSPACE, RESTRICTED_WORKSPACE, DATASTORE
-from slingshot.app import (create_record, GeoServer, make_slug, Solr,
-                           unpack_zip,)
+from slingshot.app import (create_record, GeoServer, HttpSession, make_slug,
+                           Solr, unpack_zip,)
 from slingshot.db import engine, load_layer
 from slingshot.layer import create_layer
 from slingshot.marc import MarcParser
@@ -55,7 +55,7 @@ def initialize(geoserver, geoserver_user, geoserver_password, db_host, db_port,
     }
     geo_auth = (geoserver_user, geoserver_password) if geoserver_user and \
         geoserver_password else None
-    geo = GeoServer(geoserver, auth=geo_auth)
+    geo = GeoServer(geoserver, HttpSession(), auth=geo_auth)
     geo.post("/workspaces", json={"workspace": {"name": PUBLIC_WORKSPACE}})
     geo.post("/workspaces", json={"workspace": {"name": RESTRICTED_WORKSPACE}})
     geo.post("/workspaces/{}/datastores".format(PUBLIC_WORKSPACE),
@@ -114,8 +114,8 @@ def publish(bucket, key, dest, db_uri, db_schema, geoserver, geoserver_user,
     solr_auth = (solr_user, solr_password) if solr_user and solr_password \
         else None
     engine.configure(db_uri, db_schema)
-    geo_svc = GeoServer(geoserver, auth=geo_auth)
-    solr_svc = Solr(solr, auth=solr_auth)
+    geo_svc = GeoServer(geoserver, HttpSession(), auth=geo_auth)
+    solr_svc = Solr(solr, HttpSession(), auth=solr_auth)
     layer = create_layer(*(unpack_zip(bucket, key, dest, s3_endpoint)),
                          s3_endpoint)
     layer.record = create_record(layer, geoserver)
