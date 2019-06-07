@@ -1,4 +1,5 @@
 import base64
+from datetime import datetime
 import os
 import threading
 import uuid
@@ -8,6 +9,8 @@ import attr
 import requests
 
 from slingshot import PUBLIC_WORKSPACE, RESTRICTED_WORKSPACE, DATASTORE
+from slingshot.db import load_layer
+from slingshot.layer import create_layer
 from slingshot.parsers import FGDCParser, parse
 from slingshot.record import Record
 from slingshot.s3 import S3IO, session
@@ -115,10 +118,11 @@ class HttpMethodMixin:
 
 
 class GeoServer(HttpMethodMixin):
-    def __init__(self, url, client, auth=None):
-        self.url = "{}/rest".format(url.rstrip("/"))
+    def __init__(self, url, client, auth=None, s3_alias="s3"):
+        self.url = url.rstrip("/")
         self.client = client
         self.auth = auth
+        self.s3_alias = s3_alias
 
     def request(self, method, path, **kwargs):
         """Make a request.
@@ -129,12 +133,12 @@ class GeoServer(HttpMethodMixin):
         very large.
         """
         kwargs = {"stream": False, "auth": self.auth, **kwargs}
-        url = "{}/{}".format(self.url, path.lstrip("/"))
+        url = "{}/rest/{}".format(self.url, path.lstrip("/"))
         r = self.client.request(method, url, **kwargs)
         r.raise_for_status()
         return r
 
-    def add(self, layer, s3_alias="s3"):
+    def add(self, layer):
         """Add the layer to GeoServer.
 
         In the case of of a Shapefile, the layer should already exist in the
@@ -144,11 +148,11 @@ class GeoServer(HttpMethodMixin):
         if layer.format == 'Shapefile':
             self._add_feature(layer)
         elif layer.format == 'GeoTiff':
-            self._add_coverage(layer, s3_alias)
+            self._add_coverage(layer)
         else:
             raise Exception("Unknown format")
 
-    def _add_coverage(self, layer, s3_alias):
+    def _add_coverage(self, layer):
         workspace = PUBLIC_WORKSPACE if layer.is_public() else \
             RESTRICTED_WORKSPACE
         data = {
@@ -156,7 +160,8 @@ class GeoServer(HttpMethodMixin):
                 "name": layer.name,
                 "type": "S3GeoTiff",
                 "enabled": True,
-                "url": "{}://{}/{}".format(s3_alias, layer.bucket, layer.tif),
+                "url": "{}://{}/{}".format(self.s3_alias, layer.bucket,
+                                           layer.tif),
                 "workspace": {"name": workspace},
             }
         }
@@ -212,3 +217,32 @@ class Solr(HttpMethodMixin):
 
     def commit(self):
         self.post('update', json={'commit': {}})
+
+
+def publish_layer(bucket, key, geoserver, solr, destination, s3_url):
+    unpacked = unpack_zip(bucket, key, destination, s3_url)
+    layer = create_layer(*unpacked, s3_url)
+    layer.record = create_record(layer, geoserver.url)
+    if layer.format == "Shapefile":
+        load_layer(layer)
+    geoserver.add(layer)
+    solr.add(layer.record.as_dict())
+    return layer.name
+
+
+def publishable_layers(bucket, dynamo):
+    s3 = session().resource("s3")
+    db = session().resource("dynamodb")
+    uploads = s3.Bucket(bucket)
+    table = db.Table(dynamo)
+    for page in uploads.objects.pages():
+        for obj in page:
+            name = os.path.splitext(obj.key)[0]
+            res = table.get_item(Key={"LayerName": name})
+            layer = res.get("Item")
+            if layer:
+                l_mod = datetime.fromisoformat(layer['LastMod'])
+                if l_mod > obj.last_modified.replace(tzinfo=None):
+                    # published layer is newer than uploaded layer
+                    continue
+            yield obj.key

@@ -1,3 +1,4 @@
+from datetime import datetime
 import uuid
 
 import requests_mock
@@ -8,6 +9,7 @@ from slingshot.app import (
     HttpSession,
     make_slug,
     make_uuid,
+    publishable_layers,
     Solr,
     unpack_zip,
 )
@@ -72,3 +74,28 @@ def test_make_uuid_creates_uuid_string():
 
 def test_make_slug_creates_slug():
     assert make_slug('bermuda') == 'mit-34clfhaokfmkq'
+
+
+def test_publishable_layers_includes_new_layer(s3, dynamo_table):
+    s3.Bucket("upload").put_object(Key="foo.zip", Body="Some data")
+    layers = list(publishable_layers("upload", "slingshot"))
+    assert layers.pop() == "foo.zip"
+
+
+def test_publishable_layers_includes_updated_layer(s3, dynamo_table):
+    awhile_ago = datetime(1980, 1, 1).isoformat()
+    dynamo_table.put_item(Item={"LayerName": "foo",
+                                "LastMod": awhile_ago})
+    s3.Bucket("upload").put_object(Key="foo.zip", Body="Some data")
+    layers = list(publishable_layers("upload", "slingshot"))
+    assert layers.pop() == "foo.zip"
+
+
+def test_publishable_layers_skips_old_layer(s3, dynamo_table):
+    the_future = datetime(2080, 1, 1).isoformat()
+    # This test will fail in the year 2080. Probably ok. I'll be dead anyways.
+    dynamo_table.put_item(Item={"LayerName": "foo",
+                                "LastMod": the_future})
+    s3.Bucket("upload").put_object(Key="foo.zip", Body="Some data")
+    layers = list(publishable_layers("upload", "slingshot"))
+    assert not layers

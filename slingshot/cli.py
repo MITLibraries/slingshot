@@ -1,12 +1,16 @@
+from concurrent.futures import as_completed, ThreadPoolExecutor
+from datetime import datetime
+import os.path
+
 import click
 
-from slingshot import PUBLIC_WORKSPACE, RESTRICTED_WORKSPACE, DATASTORE
-from slingshot.app import (create_record, GeoServer, HttpSession, make_slug,
-                           Solr, unpack_zip,)
-from slingshot.db import engine, load_layer
-from slingshot.layer import create_layer
+from slingshot import state, PUBLIC_WORKSPACE, RESTRICTED_WORKSPACE, DATASTORE
+from slingshot.app import (GeoServer, HttpSession, make_slug, publish_layer,
+                           publishable_layers, Solr)
+from slingshot.db import engine
 from slingshot.marc import MarcParser
 from slingshot.record import Record
+from slingshot.s3 import session
 
 
 @click.group()
@@ -70,15 +74,17 @@ def initialize(geoserver, geoserver_user, geoserver_password, db_host, db_port,
 
 
 @main.command()
-@click.argument('bucket')
-@click.argument('key')
-@click.argument('dest')
+@click.argument('layers', nargs=-1)
+@click.option('--publish-all', is_flag=True,
+              help="Publish all layers in the upload bucket. If the layer "
+                   "has already been published it will be skipped unless the "
+                   "uploaded layer is newer than the published layer.")
 @click.option('--db-uri', envvar='PG_DATABASE',
               help="SQLAlchemy PostGIS URL "
                    "Ex: postgresql://user:password@host:5432/dbname")
 @click.option('--db-schema', envvar='PG_SCHEMA', default='public',
               help="PostGres schema name. Default value: public")
-@click.option('--geoserver', envvar='GEOSERVER', help="Base Geoserver ULR")
+@click.option('--geoserver', envvar='GEOSERVER', help="Base Geoserver URL")
 @click.option('--geoserver-user', envvar='GEOSERVER_USER',
               help="GeoServer user")
 @click.option('--geoserver-password', envvar='GEOSERVER_PASSWORD',
@@ -95,35 +101,55 @@ def initialize(geoserver, geoserver_user, geoserver_password, db_host, db_port,
                    "appears as the protocol) for alternative S3 services, for "
                    "example: minio://bucket/key. See https://docs.geoserver.org/latest/en/user/community/s3-geotiff/index.html "  # noqa: E501
                    "for more information.")
-def publish(bucket, key, dest, db_uri, db_schema, geoserver, geoserver_user,
-            geoserver_password, solr, solr_user, solr_password, s3_endpoint,
-            s3_alias):
-    """Publish layer at s3://BUCKET/KEY
-
-    This will publish the uploaded zipfile layer named KEY in the S3 bucket
-    named BUCKET. The unpacked, processed layer will be stored in a new
-    directory named after the layer in the DEST bucket.
-
-    The initial zipfile should contain the necessary data files and an
-    fgdc.xml file. The unpacked zipfile will be flattened (any subdirectories
-    removed) and a geoblacklight.json file containing the GeoBlacklight
-    record will be added.
-    """
+@click.option('--dynamo-table',
+              help="Name of DynamoDB table for tracking state of layer")
+@click.option('--upload-bucket', help="Name of S3 bucket for uploaded layers")
+@click.option('--storage-bucket', help="Name of S3 bucket for stored layers")
+@click.option('--num-workers', default=1,
+              help="Number of worker threads to use. There is likely not much "
+                   "point in setting this higher than the database connection "
+                   "pool size which is 5 by default. Defaults to 1.")
+def publish(layers, db_uri, db_schema, geoserver, geoserver_user,
+            geoserver_password, solr, solr_user, solr_password,
+            s3_endpoint, s3_alias, dynamo_table, upload_bucket,
+            storage_bucket, num_workers, publish_all):
+    if not any((layers, publish_all)) or all((layers, publish_all)):
+        raise click.ClickException(
+            "You must specify either one or more uploaded layer package names "
+            "or use the --publish-all switch.")
     geo_auth = (geoserver_user, geoserver_password) if geoserver_user and \
         geoserver_password else None
     solr_auth = (solr_user, solr_password) if solr_user and solr_password \
         else None
     engine.configure(db_uri, db_schema)
-    geo_svc = GeoServer(geoserver, HttpSession(), auth=geo_auth)
+    geo_svc = GeoServer(geoserver, HttpSession(), auth=geo_auth,
+                        s3_alias=s3_alias)
     solr_svc = Solr(solr, HttpSession(), auth=solr_auth)
-    layer = create_layer(*(unpack_zip(bucket, key, dest, s3_endpoint)),
-                         s3_endpoint)
-    layer.record = create_record(layer, geoserver)
-    if layer.format == "Shapefile":
-        load_layer(layer)
-    geo_svc.add(layer, s3_alias)
-    solr_svc.add(layer.record.as_dict())
-    click.echo("Published {}".format(layer.name))
+    dynamodb = session().resource("dynamodb").Table(dynamo_table)
+    if publish_all:
+        work = publishable_layers(upload_bucket, dynamo_table)
+    else:
+        work = layers
+    with ThreadPoolExecutor(max_workers=num_workers) as executor:
+        futures = {executor.submit(publish_layer, upload_bucket, layer,
+                                   geo_svc, solr_svc, storage_bucket,
+                                   s3_endpoint): layer for layer in work}
+        for future in as_completed(futures):
+            layer = futures[future]
+            try:
+                res = future.result()
+            except Exception as e:
+                click.echo("Could not publish {}: {}".format(layer, e))
+                dynamodb.put_item(Item={
+                    "LayerName": os.path.splitext(layer)[0],
+                    "LastMod": datetime.utcnow().isoformat(timespec="seconds"),
+                    "State": state.FAILED})
+            else:
+                click.echo("Published {}".format(res))
+                dynamodb.put_item(Item={
+                    "LayerName": os.path.splitext(layer)[0],
+                    "LastMod": datetime.utcnow().isoformat(timespec="seconds"),
+                    "State": state.PUBLISHED})
 
 
 @main.command()
