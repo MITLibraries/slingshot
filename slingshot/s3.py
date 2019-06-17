@@ -1,4 +1,26 @@
+import boto3
 import io
+import threading
+
+
+class _Session:
+    """A threadsafe boto session.
+
+    Use the global module-level ``session`` instance of this class to get
+    a boto3 session.
+    """
+    def __init__(self):
+        self._session = threading.local()
+
+    def __call__(self):
+        try:
+            return self._session.s
+        except AttributeError:
+            self._session.s = boto3.session.Session()
+        return self._session.s
+
+
+session = _Session()
 
 
 class S3IO(io.RawIOBase):

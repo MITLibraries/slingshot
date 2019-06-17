@@ -5,13 +5,12 @@ import uuid
 from zipfile import ZipFile
 
 import attr
-import boto3
 import requests
 
 from slingshot import PUBLIC_WORKSPACE, RESTRICTED_WORKSPACE, DATASTORE
 from slingshot.parsers import FGDCParser, parse
 from slingshot.record import Record
-from slingshot.s3 import S3IO
+from slingshot.s3 import S3IO, session
 
 
 SUPPORTED_EXT = ('.shp', '.tif', '.tiff')
@@ -27,7 +26,7 @@ def unpack_zip(src_bucket, key, dest_bucket, endpoint=None):
     uploaded zipfile are removed leaving a flattened structure in the new
     object.
     """
-    s3 = boto3.resource('s3', endpoint_url=endpoint)
+    s3 = session().resource('s3', endpoint_url=endpoint)
     name = os.path.splitext(key)[0]
     obj = S3IO(s3.Object(src_bucket, key))
     bucket = s3.Bucket(dest_bucket)

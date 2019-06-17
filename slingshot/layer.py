@@ -6,11 +6,9 @@ try:
 except ImportError:
     from xml.etree.ElementTree import iterparse
 
-import boto3
-
 from slingshot.proj import parser
 from slingshot.record import Record
-from slingshot.s3 import S3IO
+from slingshot.s3 import S3IO, session
 
 
 _LRU_CACHE_SIZE = 32
@@ -24,7 +22,7 @@ class S3Layer:
     necessary data files.
     """
     def __init__(self, bucket, key, endpoint=None):
-        self.s3 = boto3.resource('s3', endpoint_url=endpoint)
+        self.s3 = session().resource('s3', endpoint_url=endpoint)
         self.bucket = bucket
         self.key = key
         self.endpoint = endpoint
@@ -170,7 +168,7 @@ def create_layer(bucket, key, endpoint=None):
     Factory function that creates a new :class:`slingshot.s3.S3Layer` based
     on the given bucket and key.
     """
-    s3 = boto3.resource('s3', endpoint_url=endpoint)
+    s3 = session().resource('s3', endpoint_url=endpoint)
     bkt = s3.Bucket(bucket)
     for item in bkt.objects.filter(Prefix=key):
         if item.key.endswith('.shp'):
