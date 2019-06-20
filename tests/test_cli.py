@@ -4,6 +4,7 @@ from click.testing import CliRunner
 import pytest
 import requests_mock
 
+from slingshot import state
 from slingshot.cli import main
 from slingshot.db import engine, metadata
 
@@ -31,7 +32,7 @@ def db():
 
 
 @pytest.mark.integration
-def test_publishes_shapefile(db, runner, shapefile, s3):
+def test_publishes_shapefile(db, runner, shapefile, s3, dynamo_table):
     bucket = s3.Bucket("upload")
     bucket.upload_file(shapefile, "bermuda.zip")
     uri = db().url
@@ -40,21 +41,28 @@ def test_publishes_shapefile(db, runner, shapefile, s3):
         m.post("mock://example.com/geoserver/rest/workspaces/public/"
                "datastores/pg/featuretypes")
         m.post("mock://example.com/solr/update/json/docs")
-        res = runner.invoke(main, ['publish', 'upload', 'bermuda.zip',
-                                   'store', '--db-uri', uri, '--db-schema',
-                                   schema, '--geoserver',
-                                   'mock://example.com/geoserver/',
-                                   '--solr', 'mock://example.com/solr'])
+        res = runner.invoke(main,
+                            ['publish',
+                             '--upload-bucket', 'upload',
+                             '--storage-bucket', 'store',
+                             '--db-uri', uri,
+                             '--db-schema', schema,
+                             '--geoserver', 'mock://example.com/geoserver/',
+                             '--solr', 'mock://example.com/solr',
+                             '--dynamo-table', dynamo_table.name,
+                             'bermuda.zip'])
     assert res.exit_code == 0
     assert "Published bermuda" in res.output
     with db().connect() as conn:
         r = conn.execute('SELECT COUNT(*) FROM {}.bermuda'.format(schema)) \
             .scalar()
         assert r == 713
+    item = dynamo_table.get_item(Key={"LayerName": "bermuda"}).get("Item")
+    assert item["State"] == state.PUBLISHED
 
 
 @pytest.mark.integration
-def test_publishes_geotiff(runner, geotiff, s3):
+def test_publishes_geotiff(runner, geotiff, s3, dynamo_table):
     bucket = s3.Bucket("upload")
     bucket.upload_file(geotiff, "france.zip")
     with requests_mock.Mocker() as m:
@@ -63,12 +71,18 @@ def test_publishes_geotiff(runner, geotiff, s3):
         m.post('mock://example.com/geoserver/rest/workspaces/secure'
                '/coveragestores/france/coverages')
         m.post('mock://example.com/solr/update/json/docs')
-        res = runner.invoke(main, ['publish', 'upload', 'france.zip',
-                                   'store', '--geoserver',
-                                   'mock://example.com/geoserver/',
-                                   '--solr', 'mock://example.com/solr'])
-        assert res.exit_code == 0
-        assert 'Published france' in res.output
+        res = runner.invoke(main,
+                            ['publish',
+                             '--upload-bucket', 'upload',
+                             '--storage-bucket', 'store',
+                             '--geoserver', 'mock://example.com/geoserver/',
+                             '--solr', 'mock://example.com/solr',
+                             '--dynamo-table', dynamo_table.name,
+                             'france.zip'])
+    assert res.exit_code == 0
+    assert 'Published france' in res.output
+    item = dynamo_table.get_item(Key={"LayerName": "france"}).get("Item")
+    assert item["State"] == state.PUBLISHED
 
 
 @pytest.mark.integration

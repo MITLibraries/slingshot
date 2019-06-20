@@ -1,7 +1,7 @@
 import os
 
 import boto3
-from moto import mock_s3
+from moto import mock_s3, mock_dynamodb2
 import pytest
 
 from slingshot.layer import Shapefile
@@ -14,6 +14,21 @@ def s3():
         conn.create_bucket(Bucket="upload")
         conn.create_bucket(Bucket="store")
         yield conn
+
+
+@pytest.fixture
+def dynamo_table():
+    with mock_dynamodb2():
+        db = boto3.resource('dynamodb')
+        table = db.create_table(
+            TableName="slingshot",
+            KeySchema=[{"AttributeName": "LayerName", "KeyType": "HASH"}],
+            AttributeDefinitions=[
+                {"AttributeName": "LayerName", "AttributeType": "S"}],
+            BillingMode="PAY_PER_REQUEST",
+            ProvisionedThroughput={"ReadCapacityUnits": 1,
+                                   "WriteCapacityUnits": 1})
+        yield table
 
 
 @pytest.fixture
