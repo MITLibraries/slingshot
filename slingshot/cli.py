@@ -3,6 +3,7 @@ from datetime import datetime
 import os.path
 
 import click
+from sqlalchemy.engine.url import URL
 
 from slingshot import state, PUBLIC_WORKSPACE, RESTRICTED_WORKSPACE, DATASTORE
 from slingshot.app import (GeoServer, HttpSession, make_slug, publish_layer,
@@ -27,7 +28,7 @@ def main():
 @click.option('--geoserver-password', envvar='GEOSERVER_PASSWORD',
               help="GeoServer password")
 @click.option('--db-host', default="localhost", help="PostGIS hostname")
-@click.option('--db-port', default="5432", help="PostGIS port")
+@click.option('--db-port', default=5432, help="PostGIS port")
 @click.option('--db-database', default="postgres",
               help="PostGIS database name")
 @click.option('--db-schema', default="public", help="PostGIS schema")
@@ -81,7 +82,16 @@ def initialize(geoserver, geoserver_user, geoserver_password, db_host, db_port,
                    "uploaded layer is newer than the published layer.")
 @click.option('--db-uri', envvar='PG_DATABASE',
               help="SQLAlchemy PostGIS URL "
-                   "Ex: postgresql://user:password@host:5432/dbname")
+                   "Ex: postgresql://user:password@host:5432/dbname "
+                   "Alternatively, instead of passing the database URL, the "
+                   "URL components can be passed in separately.")
+@click.option('--db-user', envvar="PG_USER", help="Postgres user")
+@click.option('--db-password', envvar="PG_PASSWORD", help="Postgres password")
+@click.option('--db-host', envvar="PG_HOST", default="localhost",
+              help="Postgres host. Default value: localhost")
+@click.option('--db-port', envvar="PG_PORT", default=5432,
+              help="Postgres port. Default value: 5432")
+@click.option('--db-name', envvar="PG_NAME", help="Postgres database name")
 @click.option('--db-schema', envvar='PG_SCHEMA', default='public',
               help="PostGres schema name. Default value: public")
 @click.option('--geoserver', envvar='GEOSERVER', help="Base Geoserver URL")
@@ -109,7 +119,8 @@ def initialize(geoserver, geoserver_user, geoserver_password, db_host, db_port,
               help="Number of worker threads to use. There is likely not much "
                    "point in setting this higher than the database connection "
                    "pool size which is 5 by default. Defaults to 1.")
-def publish(layers, db_uri, db_schema, geoserver, geoserver_user,
+def publish(layers, db_uri, db_user, db_password, db_host, db_port, db_name,
+            db_schema, geoserver, geoserver_user,
             geoserver_password, solr, solr_user, solr_password,
             s3_endpoint, s3_alias, dynamo_table, upload_bucket,
             storage_bucket, num_workers, publish_all):
@@ -121,7 +132,12 @@ def publish(layers, db_uri, db_schema, geoserver, geoserver_user,
         geoserver_password else None
     solr_auth = (solr_user, solr_password) if solr_user and solr_password \
         else None
-    engine.configure(db_uri, db_schema)
+    if db_uri is not None:
+        uri = db_uri
+    else:
+        uri = URL("postgresql", username=db_user, password=db_password,
+                  host=db_host, port=db_port, database=db_name)
+    engine.configure(uri, db_schema)
     geo_svc = GeoServer(geoserver, HttpSession(), auth=geo_auth,
                         s3_alias=s3_alias)
     solr_svc = Solr(solr, HttpSession(), auth=solr_auth)
