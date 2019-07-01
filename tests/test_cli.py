@@ -16,21 +16,6 @@ def runner():
     return CliRunner()
 
 
-@pytest.fixture
-def db():
-    uri = os.environ['PG_DATABASE']
-    schema = os.environ.get('PG_SCHEMA', 'public')
-    engine.configure(uri, schema)
-    if engine().has_table('bermuda', schema=schema):
-        with engine().connect() as conn:
-            conn.execute("DROP TABLE {}.bermuda".format(schema))
-    metadata().clear()
-    yield engine
-    if engine().has_table('bermuda', schema=schema):
-        with engine().connect() as conn:
-            conn.execute("DROP TABLE {}.bermuda".format(schema))
-
-
 @pytest.mark.integration
 def test_publishes_shapefile(db, runner, shapefile, s3, dynamo_table):
     bucket = s3.Bucket("upload")

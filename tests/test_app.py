@@ -1,6 +1,7 @@
 from datetime import datetime
 import uuid
 
+import pytest
 import requests_mock
 
 from slingshot.app import (
@@ -9,6 +10,7 @@ from slingshot.app import (
     HttpSession,
     make_slug,
     make_uuid,
+    publish_layer,
     publishable_layers,
     Solr,
     unpack_zip,
@@ -30,6 +32,13 @@ def test_create_record_creates_record(shapefile_object):
         'http://www.opengis.net/def/serviceType/ogc/wms') == \
         'http://example.com/wms'
     assert record.layer_id_s == "public:bermuda"
+
+
+def test_create_record_adds_fgdc_url(shapefile_object):
+    record = create_record(shapefile_object, "http://example.com")
+    assert record.dct_references_s.\
+        get("http://www.opengis.net/cat/csw/csdgm/") == \
+        "https://store.s3.amazonaws.com/bermuda/bermuda.xml"
 
 
 def test_geoserver_adds_shapefile(shapefile_object):
@@ -74,6 +83,23 @@ def test_make_uuid_creates_uuid_string():
 
 def test_make_slug_creates_slug():
     assert make_slug('bermuda') == 'mit-34clfhaokfmkq'
+
+
+@pytest.mark.integration
+def test_publish_layer_makes_fgdc_public(s3, shapefile, db):
+    s3.Bucket("upload").upload_file(shapefile, "bermuda.zip")
+    with requests_mock.Mocker() as m:
+        m.post("mock://example.com/geoserver/rest/workspaces/public/"
+               "datastores/pg/featuretypes")
+        m.post("mock://example.com/solr/update/json/docs")
+        publish_layer("upload", "bermuda.zip",
+                      GeoServer("mock://example.com/geoserver", HttpSession()),
+                      Solr("mock://example.com/solr", HttpSession()),
+                      "store")
+    obj = s3.Bucket("store").Object("bermuda/bermuda.xml")
+    grants = [g for g in obj.Acl().grants if g['Grantee'].get("URI") == \
+              'http://acs.amazonaws.com/groups/global/AllUsers']
+    assert grants.pop()['Permission'] == 'READ'
 
 
 def test_publishable_layers_includes_new_layer(s3, dynamo_table):

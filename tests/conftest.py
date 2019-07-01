@@ -4,6 +4,7 @@ import boto3
 from moto import mock_s3, mock_dynamodb2
 import pytest
 
+from slingshot.db import engine, metadata
 from slingshot.layer import Shapefile
 
 
@@ -29,6 +30,21 @@ def dynamo_table():
             ProvisionedThroughput={"ReadCapacityUnits": 1,
                                    "WriteCapacityUnits": 1})
         yield table
+
+
+@pytest.fixture
+def db():
+    uri = os.environ['PG_DATABASE']
+    schema = os.environ.get('PG_SCHEMA', 'public')
+    engine.configure(uri, schema)
+    if engine().has_table('bermuda', schema=schema):
+        with engine().connect() as conn:
+            conn.execute("DROP TABLE {}.bermuda".format(schema))
+    metadata().clear()
+    yield engine
+    if engine().has_table('bermuda', schema=schema):
+        with engine().connect() as conn:
+            conn.execute("DROP TABLE {}.bermuda".format(schema))
 
 
 @pytest.fixture
