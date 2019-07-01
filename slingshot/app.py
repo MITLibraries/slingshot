@@ -48,7 +48,8 @@ def create_record(layer, geoserver):
     param should be the root URL of the GeoServer instance.
     """
     geoserver = geoserver.rstrip("/")
-    r = parse(layer.fgdc, FGDCParser)
+    fgdc = layer.fgdc
+    r = parse(fgdc, FGDCParser)
     record = Record(**{k: v for k, v in r.items() if not k.startswith('_')})
     workspace = PUBLIC_WORKSPACE if record.dc_rights_s == "Public" else \
         RESTRICTED_WORKSPACE
@@ -57,6 +58,9 @@ def create_record(layer, geoserver):
             '{}/wms'.format(geoserver),
         'http://www.opengis.net/def/serviceType/ogc/wfs':
             '{}/wfs'.format(geoserver),
+        'http://www.opengis.net/cat/csw/csdgm/':
+            'https://{}.s3.amazonaws.com/{}'.format(fgdc.obj.bucket_name,
+                                                    fgdc.obj.key),
     }
     geom = "ENVELOPE({}, {}, {}, {})".format(r['_bbox_w'], r['_bbox_e'],
                                              r['_bbox_n'], r['_bbox_s'])
@@ -219,10 +223,11 @@ class Solr(HttpMethodMixin):
         self.post('update', json={'commit': {}})
 
 
-def publish_layer(bucket, key, geoserver, solr, destination, s3_url):
+def publish_layer(bucket, key, geoserver, solr, destination, s3_url=None):
     unpacked = unpack_zip(bucket, key, destination, s3_url)
     layer = create_layer(*unpacked, s3_url)
     layer.record = create_record(layer, geoserver.url)
+    layer.fgdc.obj.Acl().put(ACL="public-read")
     if layer.format == "Shapefile":
         load_layer(layer)
     geoserver.add(layer)
