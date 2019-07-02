@@ -52,7 +52,7 @@ def initialize(geoserver, geoserver_user, geoserver_password, db_host, db_port,
                     {"@key": "database", "$": db_database},
                     {"@key": "schema", "$": db_schema},
                     {"@key": "user", "$": db_user},
-                    {"@key": "password", "$": db_password},
+                    {"@key": "passwd", "$": db_password},
                     {"@key": "dbtype", "$": "postgis"}
                 ]
             }
@@ -67,10 +67,10 @@ def initialize(geoserver, geoserver_user, geoserver_password, db_host, db_port,
              json=datastore)
     geo.post("/workspaces/{}/datastores".format(RESTRICTED_WORKSPACE),
              json=datastore)
+    geo.delete("/security/acl/layers/*.*.r")
     geo.post("/security/acl/layers",
-             json={"{}.*.r".format(PUBLIC_WORKSPACE): "ROLE_ANONYMOUS",
+             json={"{}.*.r".format(PUBLIC_WORKSPACE): "*",
                    "{}.*.r".format(RESTRICTED_WORKSPACE): "ADMIN"})
-    geo.put("/security/acl/layers", json={"*.*.r": "ADMIN"})
     click.echo("GeoServer initialized")
 
 

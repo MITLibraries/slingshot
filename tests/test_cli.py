@@ -74,7 +74,6 @@ def test_publishes_geotiff(runner, geotiff, s3, dynamo_table):
     assert item["State"] == state.PUBLISHED
 
 
-@pytest.mark.integration
 def test_initializes_geoserver(runner):
     with requests_mock.Mocker() as m:
         m.post('mock://example.com/geoserver/rest/workspaces')
@@ -82,8 +81,8 @@ def test_initializes_geoserver(runner):
                '/datastores')
         m.post('mock://example.com/geoserver/rest/workspaces/secure'
                '/datastores')
+        m.delete('mock://example.com/geoserver/rest/security/acl/layers/*.*.r')
         m.post('mock://example.com/geoserver/rest/security/acl/layers')
-        m.put('mock://example.com/geoserver/rest/security/acl/layers')
         res = runner.invoke(main, ['initialize', '--geoserver',
                                    'mock://example.com/geoserver'])
         assert res.exit_code == 0
