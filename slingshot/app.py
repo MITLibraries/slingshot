@@ -120,6 +120,9 @@ class HttpMethodMixin:
     def put(self, url, **kwargs):
         return self.request("PUT", url, **kwargs)
 
+    def delete(self, url, **kwargs):
+        return self.request("DELETE", url, **kwargs)
+
 
 class GeoServer(HttpMethodMixin):
     def __init__(self, url, client, auth=None, s3_alias="s3"):
