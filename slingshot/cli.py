@@ -1,6 +1,7 @@
 from concurrent.futures import as_completed, ThreadPoolExecutor
 from datetime import datetime
 import os.path
+import traceback
 
 import click
 from sqlalchemy.engine.url import URL
@@ -154,8 +155,9 @@ def publish(layers, db_uri, db_user, db_password, db_host, db_port, db_name,
             layer = futures[future]
             try:
                 res = future.result()
-            except Exception as e:
-                click.echo("Could not publish {}: {}".format(layer, e))
+            except Exception:
+                click.echo(f"Failed to publish {layer}")
+                traceback.print_exc()
                 dynamodb.put_item(Item={
                     "LayerName": os.path.splitext(layer)[0],
                     "LastMod": datetime.utcnow().isoformat(timespec="seconds"),
