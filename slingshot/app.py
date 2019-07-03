@@ -239,15 +239,11 @@ def publish_layer(bucket, key, geoserver, solr, destination, ogc_proxy,
     return layer.name
 
 
-def publishable_layers(bucket, dynamo):
-    s3 = session().resource("s3")
-    db = session().resource("dynamodb")
-    uploads = s3.Bucket(bucket)
-    table = db.Table(dynamo)
-    for page in uploads.objects.pages():
+def publishable_layers(bucket, dynamodb):
+    for page in bucket.objects.pages():
         for obj in page:
             name = os.path.splitext(obj.key)[0]
-            res = table.get_item(Key={"LayerName": name})
+            res = dynamodb.get_item(Key={"LayerName": name})
             layer = res.get("Item")
             if layer:
                 l_mod = datetime.fromisoformat(layer['LastMod'])
