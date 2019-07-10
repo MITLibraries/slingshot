@@ -226,10 +226,11 @@ class Solr(HttpMethodMixin):
         self.post('update', json={'commit': {}})
 
 
-def publish_layer(bucket, key, geoserver, solr, destination, s3_url=None):
+def publish_layer(bucket, key, geoserver, solr, destination, ogc_proxy,
+                  s3_url=None):
     unpacked = unpack_zip(bucket, key, destination, s3_url)
     layer = create_layer(*unpacked, s3_url)
-    layer.record = create_record(layer, geoserver.url)
+    layer.record = create_record(layer, ogc_proxy)
     layer.fgdc.obj.Acl().put(ACL="public-read")
     if layer.format == "Shapefile":
         load_layer(layer)

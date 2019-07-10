@@ -104,6 +104,8 @@ def initialize(geoserver, geoserver_user, geoserver_password, db_host, db_port,
               help="Solr URL. Make sure to include the core name.")
 @click.option('--solr-user', envvar='SOLR_USER', help="Solr user")
 @click.option('--solr-password', envvar='SOLR_PASSWORD', help="Solr password")
+@click.option('--ogc-proxy', envvar='OGC_PROXY',
+              help="OGC proxy URL")
 @click.option('--s3-endpoint', envvar='S3_ENDPOINT',
               help="If using an alternative S3 service like Minio, set this "
                    "to the base URL for that service")
@@ -124,7 +126,7 @@ def publish(layers, db_uri, db_user, db_password, db_host, db_port, db_name,
             db_schema, geoserver, geoserver_user,
             geoserver_password, solr, solr_user, solr_password,
             s3_endpoint, s3_alias, dynamo_table, upload_bucket,
-            storage_bucket, num_workers, publish_all):
+            storage_bucket, num_workers, publish_all, ogc_proxy):
     if not any((layers, publish_all)) or all((layers, publish_all)):
         raise click.ClickException(
             "You must specify either one or more uploaded layer package names "
@@ -150,7 +152,8 @@ def publish(layers, db_uri, db_user, db_password, db_host, db_port, db_name,
     with ThreadPoolExecutor(max_workers=num_workers) as executor:
         futures = {executor.submit(publish_layer, upload_bucket, layer,
                                    geo_svc, solr_svc, storage_bucket,
-                                   s3_endpoint): layer for layer in work}
+                                   ogc_proxy, s3_endpoint):
+                   layer for layer in work}
         for future in as_completed(futures):
             layer = futures[future]
             try:

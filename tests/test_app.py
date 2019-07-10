@@ -95,11 +95,27 @@ def test_publish_layer_makes_fgdc_public(s3, shapefile, db):
         publish_layer("upload", "bermuda.zip",
                       GeoServer("mock://example.com/geoserver", HttpSession()),
                       Solr("mock://example.com/solr", HttpSession()),
-                      "store")
+                      "store", "mock://example.com/ogc")
     obj = s3.Bucket("store").Object("bermuda/bermuda.xml")
     grants = [g for g in obj.Acl().grants if g['Grantee'].get("URI") == \
               'http://acs.amazonaws.com/groups/global/AllUsers']
     assert grants.pop()['Permission'] == 'READ'
+
+
+@pytest.mark.integration
+def test_publish_layer_uses_ogc_proxy_url(s3, shapefile, db):
+    s3.Bucket("upload").upload_file(shapefile, "bermuda.zip")
+    with requests_mock.Mocker() as m:
+        m.post("mock://example.com/geoserver/rest/workspaces/public/"
+               "datastores/pg/featuretypes")
+        m.post("mock://example.com/solr/update/json/docs")
+        publish_layer("upload", "bermuda.zip",
+                      GeoServer("mock://example.com/geoserver", HttpSession()),
+                      Solr("mock://example.com/solr", HttpSession()),
+                      "store", "mock://example.com/ogc/")
+    obj = s3.Bucket("store").Object("bermuda/geoblacklight.json")
+    assert "mock://example.com/ogc/wms" in obj.get()['Body'].read()\
+            .decode('utf8')
 
 
 def test_publishable_layers_includes_new_layer(s3, dynamo_table):
