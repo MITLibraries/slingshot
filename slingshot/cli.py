@@ -160,7 +160,7 @@ def publish(layers, db_uri, db_user, db_password, db_host, db_port, db_name,
                 res = future.result()
             except Exception:
                 click.echo(f"Failed to publish {layer}")
-                traceback.print_exc()
+                click.echo(traceback.format_exc())
                 dynamodb.put_item(Item={
                     "LayerName": os.path.splitext(layer)[0],
                     "LastMod": datetime.utcnow().isoformat(timespec="seconds"),
