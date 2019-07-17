@@ -2,6 +2,8 @@ import boto3
 import io
 import threading
 
+from slingshot import S3_BUFFER_SIZE
+
 
 class _Session:
     """A threadsafe boto session.
@@ -64,3 +66,26 @@ class S3IO(io.RawIOBase):
         data = resp['Body'].read()
         self.seek(len(data), io.SEEK_CUR)
         return data
+
+
+def upload(fp, bucket, key, client, chunksize=S3_BUFFER_SIZE):
+    mp = client.create_multipart_upload(Bucket=bucket, Key=key)
+    mp_id = mp["UploadId"]
+    parts = []
+    i = 1
+    try:
+        while True:
+            chunk = fp.read(chunksize)
+            if not chunk:
+                break
+            res = client.upload_part(Body=chunk, Bucket=bucket, Key=key,
+                                     PartNumber=i, UploadId=mp_id)
+            parts.append({"PartNumber": i, "ETag": res["ETag"]})
+            i += 1
+        client.complete_multipart_upload(Bucket=bucket, Key=key,
+                                         MultipartUpload={"Parts": parts},
+                                         UploadId=mp_id)
+    except Exception:
+        client.abort_multipart_upload(Bucket=bucket, Key=key,
+                                      UploadId=mp["UploadId"])
+        raise

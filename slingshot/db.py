@@ -1,3 +1,4 @@
+import io
 import re
 
 from geoalchemy2 import Geometry
@@ -14,6 +15,8 @@ from sqlalchemy import (
     Table,
     Text,
 )
+
+from slingshot import S3_BUFFER_SIZE
 
 
 GEOM_TYPES = {
@@ -119,6 +122,45 @@ def multiply(geometry):
     return geometry
 
 
+class Wrapped(io.BufferedIOBase):
+    """Buffered sequential reader.
+
+    This is a pretty dumb shim to deal with the inefficiencies of treating
+    an S3 object like a file. It's intended to only be used for wrapping
+    a shapefile's files when being fed to the psycopg2 cursor's
+    ``copy_from`` method. Don't use this when reading a zipfile. It will
+    break.
+    """
+    def __init__(self, raw):
+        self.raw = raw
+        self.buffer = b''
+
+    def seekable(self):
+        return False
+
+    def writable(self):
+        return False
+
+    def peek(self, size=-1):
+        raise NotImplementedError
+
+    def read1(self, size=-1):
+        return self.read(size)
+
+    def read(self, size=-1):
+        if size is None or size < 0:
+            return self.raw.read()
+        else:
+            while size > len(self.buffer):
+                chunk = self.raw.read(S3_BUFFER_SIZE)
+                if not chunk:
+                    break
+                self.buffer += chunk
+            buf = self.buffer[:size]
+            self.buffer = self.buffer[size:]
+            return buf
+
+
 class PGShapeReader:
     """Implements file-like interface to shapefile for PG COPY command.
 
@@ -173,7 +215,7 @@ class PGShapeReader:
 def load_layer(layer):
     """Load the layer into PostGIS."""
     srid = layer.srid
-    with Reader(shp=layer.shp, dbf=layer.dbf) as sf:
+    with Reader(shp=Wrapped(layer.shp), dbf=Wrapped(layer.dbf)) as sf:
         geom_type = GEOM_TYPES[sf.shapeType]
         fields = sf.fields[1:]
         t = table(layer.name, geom_type, srid, fields)
