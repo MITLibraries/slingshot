@@ -13,7 +13,7 @@ from slingshot.db import load_layer
 from slingshot.layer import create_layer
 from slingshot.parsers import FGDCParser, parse
 from slingshot.record import Record
-from slingshot.s3 import S3IO, session
+from slingshot.s3 import S3IO, session, upload
 
 
 SUPPORTED_EXT = ('.shp', '.tif', '.tiff')
@@ -32,12 +32,12 @@ def unpack_zip(src_bucket, key, dest_bucket, endpoint=None):
     s3 = session().resource('s3', endpoint_url=endpoint)
     name = os.path.splitext(key)[0]
     obj = S3IO(s3.Object(src_bucket, key))
-    bucket = s3.Bucket(dest_bucket)
+    client = session().client('s3', endpoint_url=endpoint)
     with ZipFile(obj) as zf:
         for f in [m for m in zf.infolist() if not m.is_dir()]:
             dest = os.path.join(name, os.path.basename(f.filename))
             with zf.open(f) as fp:
-                bucket.put_object(Key=dest, Body=fp)
+                upload(fp, dest_bucket, dest, client)
     return dest_bucket, name
 
 

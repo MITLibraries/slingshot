@@ -26,9 +26,7 @@ def dynamo_table():
             KeySchema=[{"AttributeName": "LayerName", "KeyType": "HASH"}],
             AttributeDefinitions=[
                 {"AttributeName": "LayerName", "AttributeType": "S"}],
-            BillingMode="PAY_PER_REQUEST",
-            ProvisionedThroughput={"ReadCapacityUnits": 1,
-                                   "WriteCapacityUnits": 1})
+            BillingMode="PAY_PER_REQUEST")
         yield table
 
 
