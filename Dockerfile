@@ -12,6 +12,7 @@ COPY Pipfile* /
 RUN pipenv install --system --ignore-pipfile --deploy
 COPY --from=wheel /slingshot/dist/slingshot-*-py3-none-any.whl .
 RUN pip install slingshot-*-py3-none-any.whl
+COPY entrypoint.sh /
 
-ENTRYPOINT ["slingshot"]
+ENTRYPOINT ["/entrypoint.sh"]
 CMD ["--help"]
