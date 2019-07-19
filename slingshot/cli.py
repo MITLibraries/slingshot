@@ -106,6 +106,8 @@ def initialize(geoserver, geoserver_user, geoserver_password, db_host, db_port,
 @click.option('--solr-password', envvar='SOLR_PASSWORD', help="Solr password")
 @click.option('--ogc-proxy', envvar='OGC_PROXY',
               help="OGC proxy URL")
+@click.option('--aws-region', envvar='AWS_DEFAULT_REGION', default='us-east-1',
+              help="AWS region")
 @click.option('--s3-endpoint', envvar='S3_ENDPOINT',
               help="If using an alternative S3 service like Minio, set this "
                    "to the base URL for that service")
@@ -116,6 +118,9 @@ def initialize(geoserver, geoserver_user, geoserver_password, db_host, db_port,
                    "for more information.")
 @click.option('--dynamo-table',
               help="Name of DynamoDB table for tracking state of layer")
+@click.option('--dynamo-endpoint',
+              help="If using an alternative DynamoDB service like moto, set "
+                   "this to the base URL for that service")
 @click.option('--upload-bucket', help="Name of S3 bucket for uploaded layers")
 @click.option('--storage-bucket', help="Name of S3 bucket for stored layers")
 @click.option('--num-workers', default=1,
@@ -125,8 +130,9 @@ def initialize(geoserver, geoserver_user, geoserver_password, db_host, db_port,
 def publish(layers, db_uri, db_user, db_password, db_host, db_port, db_name,
             db_schema, geoserver, geoserver_user,
             geoserver_password, solr, solr_user, solr_password,
-            s3_endpoint, s3_alias, dynamo_table, upload_bucket,
-            storage_bucket, num_workers, publish_all, ogc_proxy):
+            s3_endpoint, s3_alias, dynamo_endpoint, dynamo_table, aws_region,
+            upload_bucket, storage_bucket, num_workers, publish_all,
+            ogc_proxy):
     if not any((layers, publish_all)) or all((layers, publish_all)):
         raise click.ClickException(
             "You must specify either one or more uploaded layer package names "
@@ -144,9 +150,13 @@ def publish(layers, db_uri, db_user, db_password, db_host, db_port, db_name,
     geo_svc = GeoServer(geoserver, HttpSession(), auth=geo_auth,
                         s3_alias=s3_alias)
     solr_svc = Solr(solr, HttpSession(), auth=solr_auth)
-    dynamodb = session().resource("dynamodb").Table(dynamo_table)
+    dynamo = session().resource("dynamodb", endpoint_url=dynamo_endpoint,
+                                region_name=aws_region)
+    s3 = session().resource("s3", endpoint_url=s3_endpoint,
+                            region_name=aws_region)
+    dynamodb = dynamo.Table(dynamo_table)
     if publish_all:
-        work = publishable_layers(upload_bucket, dynamo_table)
+        work = publishable_layers(s3.Bucket(upload_bucket), dynamodb)
     else:
         work = layers
     with ThreadPoolExecutor(max_workers=num_workers) as executor:
