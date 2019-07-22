@@ -35,13 +35,6 @@ setup(
         'requests',
     ],
     python_requires='>=3.7.1',
-    setup_requires=[
-        'pytest-runner',
-    ],
-    tests_require=[
-        'pytest',
-        'requests-mock',
-    ],
     entry_points={
         'console_scripts': [
             'slingshot = slingshot.cli:main',
