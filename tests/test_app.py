@@ -26,18 +26,22 @@ def test_unpack_zip_extracts_to_bucket(s3, shapefile):
 
 
 def test_create_record_creates_record(shapefile_object):
-    record = create_record(shapefile_object, "http://example.com")
+    record = create_record(shapefile_object, "http://example.com",
+                           "http://example.com/download")
     assert record.dct_provenance_s == 'MIT'
     assert record.dct_references_s.get(
         'http://www.opengis.net/def/serviceType/ogc/wms') == \
         'http://example.com/wms'
+    assert record.dct_references_s.get("http://schema.org/downloadUrl") == \
+        "http://example.com/download/{}".format(record.layer_slug_s)
     assert record.layer_id_s == "public:bermuda"
 
 
 def test_create_record_adds_fgdc_url(shapefile_object):
-    record = create_record(shapefile_object, "http://example.com")
+    record = create_record(shapefile_object, "http://example.com",
+                           "http://example.com/download")
     assert record.dct_references_s.\
-        get("http://www.opengis.net/cat/csw/csdgm/") == \
+        get("http://www.opengis.net/cat/csw/csdgm") == \
         "https://store.s3.amazonaws.com/bermuda/bermuda.xml"
 
 
@@ -95,7 +99,8 @@ def test_publish_layer_makes_fgdc_public(s3, shapefile, db):
         publish_layer("upload", "bermuda.zip",
                       GeoServer("mock://example.com/geoserver", HttpSession()),
                       Solr("mock://example.com/solr", HttpSession()),
-                      "store", "mock://example.com/ogc")
+                      "store", "mock://example.com/ogc",
+                      "mock://example.com/download")
     obj = s3.Bucket("store").Object("bermuda/bermuda.xml")
     grants = [g for g in obj.Acl().grants if g['Grantee'].get("URI") == \
               'http://acs.amazonaws.com/groups/global/AllUsers']
@@ -112,7 +117,8 @@ def test_publish_layer_uses_ogc_proxy_url(s3, shapefile, db):
         publish_layer("upload", "bermuda.zip",
                       GeoServer("mock://example.com/geoserver", HttpSession()),
                       Solr("mock://example.com/solr", HttpSession()),
-                      "store", "mock://example.com/ogc/")
+                      "store", "mock://example.com/ogc/",
+                      "mock://example.com/download")
     obj = s3.Bucket("store").Object("bermuda/geoblacklight.json")
     assert "mock://example.com/ogc/wms" in obj.get()['Body'].read()\
             .decode('utf8')

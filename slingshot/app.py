@@ -41,7 +41,7 @@ def unpack_zip(src_bucket, key, dest_bucket, endpoint=None):
     return dest_bucket, name
 
 
-def create_record(layer, geoserver):
+def create_record(layer, geoserver, download_url):
     """Create a :class:`slingshot.record.Record` from the given layer.
 
     This will create a record from the layer's FGDC file. The geoserver
@@ -53,14 +53,17 @@ def create_record(layer, geoserver):
     record = Record(**{k: v for k, v in r.items() if not k.startswith('_')})
     workspace = PUBLIC_WORKSPACE if record.dc_rights_s == "Public" else \
         RESTRICTED_WORKSPACE
+    slug = make_slug(layer.name)
     refs = {
         'http://www.opengis.net/def/serviceType/ogc/wms':
             '{}/wms'.format(geoserver),
         'http://www.opengis.net/def/serviceType/ogc/wfs':
             '{}/wfs'.format(geoserver),
-        'http://www.opengis.net/cat/csw/csdgm/':
+        'http://www.opengis.net/cat/csw/csdgm':
             'https://{}.s3.amazonaws.com/{}'.format(fgdc.obj.bucket_name,
                                                     fgdc.obj.key),
+        'http://schema.org/downloadUrl':
+            '{}/{}'.format(download_url.rstrip('/'), slug),
     }
     geom = "ENVELOPE({}, {}, {}, {})".format(r['_bbox_w'], r['_bbox_e'],
                                              r['_bbox_n'], r['_bbox_s'])
@@ -68,7 +71,7 @@ def create_record(layer, geoserver):
                          dc_format_s=layer.format,
                          layer_id_s='{}:{}'.format(workspace, layer.name),
                          solr_geom=geom,
-                         layer_slug_s=make_slug(layer.name),
+                         layer_slug_s=slug,
                          dct_references_s=refs)
     return record
 
@@ -227,10 +230,10 @@ class Solr(HttpMethodMixin):
 
 
 def publish_layer(bucket, key, geoserver, solr, destination, ogc_proxy,
-                  s3_url=None):
+                  download_url, s3_url=None):
     unpacked = unpack_zip(bucket, key, destination, s3_url)
     layer = create_layer(*unpacked, s3_url)
-    layer.record = create_record(layer, ogc_proxy)
+    layer.record = create_record(layer, ogc_proxy, download_url)
     layer.fgdc.obj.Acl().put(ACL="public-read")
     if layer.format == "Shapefile":
         load_layer(layer)

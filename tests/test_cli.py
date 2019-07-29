@@ -40,6 +40,7 @@ def test_publishes_shapefile(db, runner, shapefile, s3, dynamo_table):
                              '--solr', 'mock://example.com/solr',
                              '--dynamo-table', dynamo_table.name,
                              '--ogc-proxy', 'mock://example.com/ogc',
+                             '--download-url', 'mock://example.com/download',
                              'bermuda.zip'])
     assert res.exit_code == 0
     assert "Published bermuda" in res.output
@@ -69,6 +70,7 @@ def test_publishes_geotiff(runner, geotiff, s3, dynamo_table):
                              '--solr', 'mock://example.com/solr',
                              '--dynamo-table', dynamo_table.name,
                              '--ogc-proxy', 'mock://example.com/ogc',
+                             '--download-url', 'mock://example.com/download',
                              'france.zip'])
     assert res.exit_code == 0
     assert 'Published france' in res.output
