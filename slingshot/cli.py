@@ -106,6 +106,8 @@ def initialize(geoserver, geoserver_user, geoserver_password, db_host, db_port,
 @click.option('--solr-password', envvar='SOLR_PASSWORD', help="Solr password")
 @click.option('--ogc-proxy', envvar='OGC_PROXY',
               help="OGC proxy URL")
+@click.option('--download-url', envvar='DOWNLOAD_URL',
+              help="Base download URL for layers")
 @click.option('--aws-region', envvar='AWS_DEFAULT_REGION', default='us-east-1',
               help="AWS region")
 @click.option('--s3-endpoint', envvar='S3_ENDPOINT',
@@ -132,7 +134,7 @@ def publish(layers, db_uri, db_user, db_password, db_host, db_port, db_name,
             geoserver_password, solr, solr_user, solr_password,
             s3_endpoint, s3_alias, dynamo_endpoint, dynamo_table, aws_region,
             upload_bucket, storage_bucket, num_workers, publish_all,
-            ogc_proxy):
+            ogc_proxy, download_url):
     if not any((layers, publish_all)) or all((layers, publish_all)):
         raise click.ClickException(
             "You must specify either one or more uploaded layer package names "
@@ -162,7 +164,7 @@ def publish(layers, db_uri, db_user, db_password, db_host, db_port, db_name,
     with ThreadPoolExecutor(max_workers=num_workers) as executor:
         futures = {executor.submit(publish_layer, upload_bucket, layer,
                                    geo_svc, solr_svc, storage_bucket,
-                                   ogc_proxy, s3_endpoint):
+                                   ogc_proxy, download_url, s3_endpoint):
                    layer for layer in work}
         for future in as_completed(futures):
             layer = futures[future]
