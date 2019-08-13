@@ -113,7 +113,7 @@ def initialize(geoserver, geoserver_user, geoserver_password, db_host, db_port,
 @click.option('--s3-endpoint', envvar='S3_ENDPOINT',
               help="If using an alternative S3 service like Minio, set this "
                    "to the base URL for that service")
-@click.option('--s3-alias', envvar='S3_ALIAS',
+@click.option('--s3-alias', envvar='S3_ALIAS', default='s3',
               help="The GeoServer S3 plugin requires a different alias (which "
                    "appears as the protocol) for alternative S3 services, for "
                    "example: minio://bucket/key. See https://docs.geoserver.org/latest/en/user/community/s3-geotiff/index.html "  # noqa: E501

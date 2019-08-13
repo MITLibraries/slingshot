@@ -215,7 +215,8 @@ class PGShapeReader:
 def load_layer(layer):
     """Load the layer into PostGIS."""
     srid = layer.srid
-    with Reader(shp=Wrapped(layer.shp), dbf=Wrapped(layer.dbf)) as sf:
+    with Reader(shp=Wrapped(layer.shp), dbf=Wrapped(layer.dbf),
+                encoding=layer.encoding) as sf:
         geom_type = GEOM_TYPES[sf.shapeType]
         fields = sf.fields[1:]
         t = table(layer.name, geom_type, srid, fields)
