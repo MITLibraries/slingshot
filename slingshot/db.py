@@ -76,7 +76,7 @@ def _make_column(field):
     f_name, f_type, f_length, f_prec = field
     if f_type == 'C':
         return Column(f_name, Text)
-    elif f_type == 'N':
+    elif f_type == 'N' or f_type == 'F':
         if f_prec == 0:
             return Column(f_name, Integer)
         else:
