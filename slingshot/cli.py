@@ -211,7 +211,7 @@ def marc(marc_file, solr, solr_user, solr_password):
     """
     solr_auth = (solr_user, solr_password) if solr_user and solr_password \
         else None
-    s = Solr(solr, solr_auth)
+    s = Solr(solr, HttpSession(), solr_auth)
     s.delete('dct_provenance_s:MIT AND dc_format_s:"Paper Map"')
     s.delete('dct_provenance_s:MIT AND dc_format_s:"Cartographic Material"')
     for record in MarcParser(marc_file):
@@ -221,7 +221,7 @@ def marc(marc_file, solr, solr_user, solr_password):
                 del(record['_location'])
                 record['layer_slug_s'] = make_slug(record['dc_identifier_s'])
                 gbl_record = Record(**record)
-                s.add(gbl_record.as_dict())
+                s.add(gbl_record.as_dict(), soft_commit=False)
         except Exception as e:
             click.echo('Failed indexing {}: {}'.format(
                 record['dc_identifier_s'], e))
