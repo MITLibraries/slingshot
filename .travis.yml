@@ -26,11 +26,7 @@ env:
     - TOX_ENV=flake8
     - TOX_ENV=safety
     - TOX_ENV=py37 AWS_SECRET_ACCESS_KEY=secret AWS_ACCESS_KEY_ID=key
-##
-# Coveralls appears to be broken. The test coverage is passing but it fails
-# when trying to submit the coverage.
-##
-#    - TOX_ENV=coveralls AWS_SECRET_ACCESS_KEY=secret AWS_ACCESS_KEY_ID=key
+    - TOX_ENV=coveralls AWS_SECRET_ACCESS_KEY=secret AWS_ACCESS_KEY_ID=key
 before_script:
     - psql -U postgres -c "CREATE DATABASE slingshot_test;"
     - psql -U postgres -d slingshot_test -c "CREATE EXTENSION postgis;"
