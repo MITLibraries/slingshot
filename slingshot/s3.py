@@ -48,12 +48,25 @@ class S3IO(io.RawIOBase):
             self._position += offset
         else:
             self._position = self.obj.content_length + offset
+        return self._position
 
     def readable(self):
         return True
 
+    def writable(self):
+        return False
+
     def seekable(self):
         return True
+
+    def readall(self):
+        return self.read()
+
+    def readinto(self, b):
+        data = self.read(len(b))
+        n = len(data)
+        b[:n] = data
+        return n
 
     def read(self, size=-1):
         if size == 0 or self.tell() >= self.obj.content_length:
