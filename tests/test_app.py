@@ -102,7 +102,7 @@ def test_publish_layer_makes_fgdc_public(s3, shapefile, db):
                       "store", "mock://example.com/ogc",
                       "mock://example.com/download")
     obj = s3.Bucket("store").Object("bermuda/bermuda.xml")
-    grants = [g for g in obj.Acl().grants if g['Grantee'].get("URI") == \
+    grants = [g for g in obj.Acl().grants if g['Grantee'].get("URI") ==
               'http://acs.amazonaws.com/groups/global/AllUsers']
     assert grants.pop()['Permission'] == 'READ'
 
@@ -121,7 +121,7 @@ def test_publish_layer_uses_ogc_proxy_url(s3, shapefile, db):
                       "mock://example.com/download")
     obj = s3.Bucket("store").Object("bermuda/geoblacklight.json")
     assert "mock://example.com/ogc/wms" in obj.get()['Body'].read()\
-            .decode('utf8')
+        .decode('utf8')
 
 
 def test_publishable_layers_includes_new_layer(s3, dynamo_table):

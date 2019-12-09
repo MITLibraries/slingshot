@@ -6,7 +6,7 @@ import requests_mock
 
 from slingshot import state
 from slingshot.cli import main
-from slingshot.db import engine, metadata
+from slingshot.db import metadata
 
 
 @pytest.fixture
@@ -91,3 +91,14 @@ def test_initializes_geoserver(runner):
                                    'mock://example.com/geoserver'])
         assert res.exit_code == 0
         assert m.call_count == 6
+
+
+def test_publishes_marc_records(runner, marc_records):
+    with requests_mock.Mocker() as m:
+        m.post('mock://example.com/solr/update')
+        m.post('mock://example.com/solr/update/json/docs')
+        res = runner.invoke(main, ['marc', marc_records,
+                                   '--solr', 'mock://example.com/solr'])
+        assert 'mock://example.com/solr/update/json/docs' in \
+                [call.url for call in m.request_history]
+        assert res.exit_code == 0
