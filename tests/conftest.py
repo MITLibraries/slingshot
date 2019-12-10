@@ -14,6 +14,7 @@ def s3():
         conn = boto3.resource("s3")
         conn.create_bucket(Bucket="upload")
         conn.create_bucket(Bucket="store")
+        conn.create_bucket(Bucket='marc')
         yield conn
 
 
@@ -43,6 +44,13 @@ def db():
     if engine().has_table('bermuda', schema=schema):
         with engine().connect() as conn:
             conn.execute("DROP TABLE {}.bermuda".format(schema))
+
+
+@pytest.fixture
+def marc_records(s3):
+    bucket = s3.Bucket('marc')
+    bucket.upload_file(_data_file('fixtures/map_01.mrc'), 'records.mrc')
+    return 's3://marc/records.mrc'
 
 
 @pytest.fixture

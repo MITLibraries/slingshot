@@ -1,18 +1,20 @@
 from concurrent.futures import as_completed, ThreadPoolExecutor
 from datetime import datetime
+import io
 import os.path
 import traceback
+from urllib.parse import urlparse
 
 import click
 from sqlalchemy.engine.url import URL
 
-from slingshot import state, PUBLIC_WORKSPACE, RESTRICTED_WORKSPACE, DATASTORE
-from slingshot.app import (GeoServer, HttpSession, make_slug, publish_layer,
+from slingshot import (state, PUBLIC_WORKSPACE, RESTRICTED_WORKSPACE,
+                       DATASTORE, S3_BUFFER_SIZE)
+from slingshot.app import (GeoServer, HttpSession, publish_layer,
                            publishable_layers, Solr)
 from slingshot.db import engine
-from slingshot.marc import MarcParser
-from slingshot.record import Record
-from slingshot.s3 import session
+from slingshot.marc import filter_record, MarcParser
+from slingshot.s3 import session, S3IO
 
 
 @click.group()
@@ -209,20 +211,20 @@ def marc(marc_file, solr, solr_user, solr_password):
     "Paper Map" or "Cartographic Material", and then index all appropriate
     records from the provided MARC XML file.
     """
+    fparts = urlparse(marc_file)
+    s3 = session().resource('s3', region_name='us-east-1')
+    marc = io.BufferedReader(
+                S3IO(s3.Object(fparts.netloc, fparts.path.lstrip('/'))),
+                buffer_size=S3_BUFFER_SIZE)
     solr_auth = (solr_user, solr_password) if solr_user and solr_password \
         else None
     s = Solr(solr, HttpSession(), solr_auth)
     s.delete('dct_provenance_s:MIT AND dc_format_s:"Paper Map"')
     s.delete('dct_provenance_s:MIT AND dc_format_s:"Cartographic Material"')
-    for record in MarcParser(marc_file):
+    for record in MarcParser(marc, filter_record):
         try:
-            if record.get('dc_format_s') and \
-               record.get('_location') in ('Map Room', 'GIS Collection'):
-                del(record['_location'])
-                record['layer_slug_s'] = make_slug(record['dc_identifier_s'])
-                gbl_record = Record(**record)
-                s.add(gbl_record.as_dict(), soft_commit=False)
+            s.add(record.as_dict(), soft_commit=False)
         except Exception as e:
-            click.echo('Failed indexing {}: {}'.format(
-                record['dc_identifier_s'], e))
+            click.echo(
+                'Failed indexing {}: {}'.format(record.dc_identifier_s, e))
     s.commit()
