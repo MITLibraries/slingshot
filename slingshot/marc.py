@@ -23,10 +23,11 @@ DC_FORMAT_S = {
 
 
 def filter_record(record):
-    return ('655' in record) and (record['655']['a'] == 'Maps.') and \
+    return record.leader[5] in ('a', 'c', 'n', 'p') and \
+           ('655' in record) and (record['655']['a'] == 'Maps.') and \
            ('852' in record) and \
-            (formats(record).intersection(DC_FORMAT_S.keys())) and \
-            (record['852']['c'] in ('MAPRM', 'GIS'))
+           (formats(record).intersection(DC_FORMAT_S.keys())) and \
+           (record['852']['c'] in ('MAPRM', 'GIS'))
 
 
 def formats(record):
