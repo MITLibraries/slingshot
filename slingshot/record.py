@@ -1,6 +1,6 @@
 from datetime import datetime
+from decimal import Decimal
 from functools import partial
-from itertools import repeat
 import json
 import re
 
@@ -12,8 +12,9 @@ RIGHTS = ('Public', 'Restricted')
 TYPES = ('Dataset', 'Image', 'Physical Object')
 GEOMS = ('Point', 'Line', 'Polygon', 'Image', 'Raster', 'Mixed')
 
+_p = r'[+-]?\d+(?:\.\d+)?'
 env_regex = re.compile(
-    r"ENVELOPE\({}, {}, {}, {}\)".format(*repeat(r"[+-]?\d+(\.\d+)?", 4)))
+    fr'ENVELOPE\((?P<W>{_p}), (?P<E>{_p}), (?P<N>{_p}), (?P<S>{_p})\)')
 Field = partial(attr.ib, default=None)
 _set = converters.optional(set)
 
@@ -53,8 +54,19 @@ def geom_converter(term):
 
 
 def envelope_validator(instance, attribute, value):
-    """A validator for checking the format of the envelope string."""
-    if not env_regex.fullmatch(value):
+    """A validator for checking the format of the envelope string.
+
+    As well as checking for a valid string format, it will check to make
+    sure the bounding box values make sense.
+    """
+    m = env_regex.fullmatch(value)
+    if not m:
+        raise ValueError('Invalid envelope string')
+    d = {k: Decimal(v) for k, v in m.groupdict().items()}
+    if not (d['N'] > d['S'] and d['E'] > d['W']):
+        raise ValueError('Invalid envelope string')
+    if not (-180 <= d['E'] <= 180 and -180 <= d['W'] <= 180 and
+            -90 <= d['N'] <= 90 and -90 <= d['S'] <= 90):
         raise ValueError('Invalid envelope string')
 
 

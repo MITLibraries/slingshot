@@ -2,10 +2,9 @@ from collections.abc import Iterator
 from decimal import Decimal, getcontext
 import re
 
-from pymarc import MARCReader
+from pymarc import Record
 
 from slingshot.app import make_slug
-from slingshot.record import Record
 
 
 COORD_REGEX = re.compile(
@@ -22,12 +21,22 @@ DC_FORMAT_S = {
 }
 
 
+RECORD_TERMINATOR = b'\x1d'
+
+
 def filter_record(record):
+    if not record:
+        return False
     return record.leader[5] in ('a', 'c', 'n', 'p') and \
-           ('655' in record) and (record['655']['a'] == 'Maps.') and \
-           ('852' in record) and \
-           (formats(record).intersection(DC_FORMAT_S.keys())) and \
-           (record['852']['c'] in ('MAPRM', 'GIS'))
+        ('655' in record) and 'Maps.' in form(record) and \
+        ('852' in record) and \
+        (formats(record).intersection(DC_FORMAT_S.keys())) and \
+        (record['852']['c'] in ('MAPRM', 'GIS'))
+
+
+def form(record):
+    return {sf for f in record.get_fields('655')
+            for sf in f.get_subfields('a')}
 
 
 def formats(record):
@@ -35,9 +44,44 @@ def formats(record):
             for sf in f.get_subfields('k')}
 
 
+class BadMARCReader(Iterator):
+    """A liberal pymarc parser.
+
+    The parser that comes with pymarc does a poor job of handling incorrect
+    MARC data. Rather than using the reported record length to extract
+    records this uses the record terminator. It's possible that some records
+    may be missing the terminator but the parser should be able to recover
+    at the expense of losing a few records. In this case, we know our data
+    is bad and we'd rather take whatever we can get and drop the rest.
+    """
+    def __init__(self, stream):
+        self.__buffer = b''
+        self.stream = stream
+
+    def __next__(self):
+        chunk = b''
+        while True:
+            idx = self.__buffer.find(RECORD_TERMINATOR)
+            if idx >= 0:
+                chunk = self.__buffer[:idx]
+                self.__buffer = self.__buffer[idx+1:]
+                # In case the buffer starts with a record terminator, keep
+                # trying until we have a record or reach the end.
+                if not chunk:
+                    continue
+                break
+            data = self.stream.read(8192)
+            if not data:
+                break
+            self.__buffer += data
+        if not chunk:
+            raise StopIteration
+        return Record(chunk, force_utf8=True)
+
+
 class MarcParser(Iterator):
     def __init__(self, stream, f=None):
-        self.reader = MARCReader(stream)
+        self.reader = BadMARCReader(stream)
         if f:
             self.reader = filter(f, self.reader)
 
@@ -48,8 +92,7 @@ class MarcParser(Iterator):
             except StopIteration:
                 raise
             except Exception:
-                # pymarc doesn't handle broken MARC very well. A single bad
-                # record will stop the whole train.
+                # pymarc does not handle broken marc at all
                 continue
             if not record:
                 continue
@@ -72,7 +115,7 @@ class MarcParser(Iterator):
                 geom = f'ENVELOPE({w}, {e}, {n}, {s})'
             else:
                 geom = None
-            r = Record(
+            r = dict(
                 dc_identifier_s=ident,
                 dc_rights_s='Public',
                 dc_title_s=record.title(),
