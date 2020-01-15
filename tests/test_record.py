@@ -1,5 +1,7 @@
 from datetime import datetime, timedelta
 
+import pytest
+
 from slingshot.record import Record, rights_converter, geom_converter
 
 
@@ -39,3 +41,9 @@ def test_geom_convert_maps_geometry():
     assert geom_converter('however, this is a polygon') == 'Polygon'
     assert geom_converter('Line') == 'Line'
     assert geom_converter('Composite Object') == 'Mixed'
+
+
+def test_record_validates_envelope():
+    r = Record(solr_geom='ENVELOPE(1, 2, 4, 3)')
+    with pytest.raises(ValueError):
+        r = Record(solr_geom='ENVELOPE(1, 2, 3, 4)')

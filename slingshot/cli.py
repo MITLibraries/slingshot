@@ -1,6 +1,8 @@
 from concurrent.futures import as_completed, ThreadPoolExecutor
 from datetime import datetime
 import io
+import itertools
+import logging
 import os.path
 import traceback
 from urllib.parse import urlparse
@@ -14,7 +16,12 @@ from slingshot.app import (GeoServer, HttpSession, publish_layer,
                            publishable_layers, Solr)
 from slingshot.db import engine
 from slingshot.marc import filter_record, MarcParser
+from slingshot.record import Record
 from slingshot.s3 import session, S3IO
+
+
+logger = logging.getLogger()
+logger.setLevel(logging.ERROR)
 
 
 @click.group()
@@ -221,10 +228,22 @@ def marc(marc_file, solr, solr_user, solr_password):
     s = Solr(solr, HttpSession(), solr_auth)
     s.delete('dct_provenance_s:MIT AND dc_format_s:"Paper Map"')
     s.delete('dct_provenance_s:MIT AND dc_format_s:"Cartographic Material"')
-    for record in MarcParser(marc, filter_record):
+
+    records = MarcParser(marc, filter_record)
+    iters = [iter(records)]*200
+    chunks = itertools.zip_longest(*iters)
+    for chunk in chunks:
+        r = []
+        for record in filter(bool, chunk):
+            try:
+                r.append(Record(**record).as_dict())
+            except Exception as e:
+                click.echo(
+                    f'Failed creating record for {record["dc_identifier_s"]}. '
+                    f'Reason: {e}')
         try:
-            s.add(record.as_dict(), soft_commit=False)
+            s.add(r, soft_commit=False)
+            click.echo(f'Added {len(r)} documents')
         except Exception as e:
-            click.echo(
-                'Failed indexing {}: {}'.format(record.dc_identifier_s, e))
+            click.echo(f'Failed adding documents: {e}')
     s.commit()
