@@ -89,10 +89,8 @@ class MarcParser(Iterator):
         while True:
             try:
                 record = next(self.reader)
-            except StopIteration:
-                raise
-            except Exception:
-                # pymarc does not handle broken marc at all
+            except UnicodeDecodeError:
+                # skip records that can't be parsed
                 continue
             if not record:
                 continue

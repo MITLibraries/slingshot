@@ -63,7 +63,7 @@ def envelope_validator(instance, attribute, value):
     if not m:
         raise ValueError('Invalid envelope string')
     d = {k: Decimal(v) for k, v in m.groupdict().items()}
-    if not (d['N'] > d['S'] and d['E'] > d['W']):
+    if not (d['N'] >= d['S'] and d['E'] >= d['W']):
         raise ValueError('Invalid envelope string')
     if not (-180 <= d['E'] <= 180 and -180 <= d['W'] <= 180 and
             -90 <= d['N'] <= 90 and -90 <= d['S'] <= 90):
