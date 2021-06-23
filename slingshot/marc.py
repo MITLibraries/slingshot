@@ -3,6 +3,7 @@ from decimal import Decimal, getcontext
 import re
 
 from pymarc import Record
+from pymarc.exceptions import RecordDirectoryInvalid
 
 from slingshot.app import make_slug
 
@@ -63,7 +64,7 @@ class BadMARCReader(Iterator):
         while True:
             idx = self.__buffer.find(RECORD_TERMINATOR)
             if idx >= 0:
-                chunk = self.__buffer[:idx]
+                chunk = self.__buffer[:idx+1]
                 self.__buffer = self.__buffer[idx+1:]
                 # In case the buffer starts with a record terminator, keep
                 # trying until we have a record or reach the end.
@@ -91,6 +92,9 @@ class MarcParser(Iterator):
                 record = next(self.reader)
             except UnicodeDecodeError:
                 # skip records that can't be parsed
+                continue
+            except RecordDirectoryInvalid:
+                print('Record directory invalid, skipping record')
                 continue
             if not record:
                 continue

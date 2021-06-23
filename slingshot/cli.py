@@ -211,15 +211,27 @@ def reindex(bucket, solr, solr_user, solr_password):
               help='Username for Solr.')
 @click.option('--solr-password', envvar='SOLR_PASSWORD',
               help='Password for Solr.')
-def marc(marc_file, solr, solr_user, solr_password):
+@click.option('--s3-endpoint', envvar='S3_ENDPOINT',
+              help="If using an alternative S3 service like Minio, set this "
+                   "to the base URL for that service")
+@click.option('--s3-alias', envvar='S3_ALIAS', default='s3',
+              help="The GeoServer S3 plugin requires a different alias (which "
+                   "appears as the protocol) for alternative S3 services, for "
+                   "example: minio://bucket/key. See https://docs.geoserver.org/latest/en/user/community/s3-geotiff/index.html "  # noqa: E501
+                   "for more information.")
+@click.option('--aws-region', envvar='AWS_DEFAULT_REGION', default='us-east-1',
+              help="AWS region")
+def marc(marc_file, solr, solr_user, solr_password, s3_endpoint, s3_alias,
+         aws_region):
     """Index MARC records into Solr.
 
     This will delete existing MIT records with a dc_format_s of
     "Paper Map" or "Cartographic Material", and then index all appropriate
-    records from the provided MARC XML file.
+    records from the provided MARC file.
     """
     fparts = urlparse(marc_file)
-    s3 = session().resource('s3', region_name='us-east-1')
+    s3 = session().resource("s3", endpoint_url=s3_endpoint,
+                            region_name=aws_region)
     marc = io.BufferedReader(
                 S3IO(s3.Object(fparts.netloc, fparts.path.lstrip('/'))),
                 buffer_size=S3_BUFFER_SIZE)
