@@ -98,7 +98,9 @@ class MarcParser(Iterator):
                 continue
             if not record:
                 continue
-            ident = f'http://library.mit.edu/item/{record["001"].value()}'
+            ident = (f'https://mit.primo.exlibrisgroup.com/discovery/'
+                     f'fulldisplay?vid=01MIT_INST:MIT&docid=alma'
+                     f'{record["001"].value()}')
             subjects = {sf for f in record.get_fields('650')
                         for sf in f.get_subfields('a')}
             spatial_subjects = {sf for f in record.get_fields('650')
