@@ -119,6 +119,10 @@ class MarcParser(Iterator):
                 geom = f'ENVELOPE({w}, {e}, {n}, {s})'
             else:
                 geom = None
+            pubyear = record.pubyear()
+            if pubyear is not None:
+                pubyear = pubyear.replace("[", "").replace("]", "").replace(
+                    "c", "").replace(".", "").replace("?", "").replace(" ", "")
             r = dict(
                 dc_identifier_s=ident,
                 dc_rights_s='Public',
@@ -130,7 +134,7 @@ class MarcParser(Iterator):
                 layer_geom_type_s='Mixed',
                 dc_subject_sm=subjects,
                 dct_spatial_sm=spatial_subjects,
-                dct_temporal_sm=record.pubyear(),
+                dct_temporal_sm=pubyear,
                 solr_geom=geom,
                 dc_format_s=fmt,
                 layer_slug_s=make_slug(ident),

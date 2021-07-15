@@ -28,7 +28,7 @@ def test_parser_returns_record_dictionary(single_record):
         layer_geom_type_s='Mixed',
         dc_subject_sm={'Geography', 'Area studies', 'Demography'},
         dct_spatial_sm={'Afghanistan'},
-        dct_temporal_sm='[2012]',
+        dct_temporal_sm='2012',
         solr_geom='ENVELOPE(60, 74.5, 38.5, 29)',
         dc_format_s='Paper Map',
         layer_slug_s='mit-thh43bskinod2',
