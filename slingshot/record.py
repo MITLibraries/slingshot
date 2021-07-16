@@ -121,7 +121,7 @@ class Record:
     dct_issued_dt = Field()
     dct_provenance_s = Field(default='MIT')
     dct_spatial_sm = Field(converter=_set)
-    dct_temporal_sm = Field(converter=_set)
+    dct_temporal_sm = Field()
     dct_references_s = Field(validator=validators.optional(
                                 validators.instance_of(dict)))
     layer_geom_type_s = Field(validator=one_of(GEOMS),

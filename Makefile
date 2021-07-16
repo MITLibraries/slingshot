@@ -32,12 +32,12 @@ update: ## Update all Python dependencies
 	pipenv update --dev
 
 publish: ## Push and tag the latest image (use `make dist && make publish`)
-	$$(aws ecr get-login --no-include-email --region us-east-1)
+	aws ecr get-login-password | docker login --password-stdin --username AWS $(ECR_REGISTRY)
 	docker push $(ECR_REGISTRY)/slingshot-stage:latest
 	docker push $(ECR_REGISTRY)/slingshot-stage:`git describe --always`
 
 promote: ## Promote the current staging build to production
-	$$(aws ecr get-login --no-include-email --region us-east-1)
+	aws ecr get-login-password | docker login --password-stdin --username AWS $(ECR_REGISTRY)
 	docker pull $(ECR_REGISTRY)/slingshot-stage:latest
 	docker tag $(ECR_REGISTRY)/slingshot-stage:latest $(ECR_REGISTRY)/slingshot-prod:latest
 	docker tag $(ECR_REGISTRY)/slingshot-stage:latest $(ECR_REGISTRY)/slingshot-prod:$(DATETIME)
