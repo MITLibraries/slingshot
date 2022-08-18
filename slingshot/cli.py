@@ -72,15 +72,21 @@ def initialize(geoserver, geoserver_user, geoserver_password, db_host, db_port,
         geoserver_password else None
     geo = GeoServer(geoserver, HttpSession(), auth=geo_auth)
     geo.post("/workspaces", json={"workspace": {"name": PUBLIC_WORKSPACE}})
+    click.echo("Initialize: public workspace generated")
     geo.post("/workspaces", json={"workspace": {"name": RESTRICTED_WORKSPACE}})
+    click.echo("Initialize: secure workspace generated")
     geo.post("/workspaces/{}/datastores".format(PUBLIC_WORKSPACE),
              json=datastore)
+    click.echo("Initialize: public workspace datastores generated")
     geo.post("/workspaces/{}/datastores".format(RESTRICTED_WORKSPACE),
              json=datastore)
+    click.echo("Initialize: secure workspace datastores generated")
     geo.delete("/security/acl/layers/*.*.r")
+    click.echo("Initialize: security ACL layers removed")
     geo.post("/security/acl/layers",
              json={"{}.*.r".format(PUBLIC_WORKSPACE): "*",
                    "{}.*.r".format(RESTRICTED_WORKSPACE): "ADMIN"})
+    click.echo("Initialize: security ACL layers recreated")
     click.echo("GeoServer initialized")
 
 

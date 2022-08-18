@@ -98,3 +98,6 @@ ENV/
 /site
 
 .pytest_cache
+
+# macOS
+.DS_Store

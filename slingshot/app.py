@@ -234,7 +234,7 @@ def publish_layer(bucket, key, geoserver, solr, destination, ogc_proxy,
     unpacked = unpack_zip(bucket, key, destination, s3_url)
     layer = create_layer(*unpacked, s3_url)
     layer.record = create_record(layer, ogc_proxy, download_url)
-    layer.fgdc.obj.Acl().put(ACL="public-read")
+    # layer.fgdc.obj.Acl().put(ACL="public-read")
     if layer.format == "Shapefile":
         load_layer(layer)
     geoserver.add(layer)
